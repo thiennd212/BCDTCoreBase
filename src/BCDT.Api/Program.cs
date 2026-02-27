@@ -47,6 +47,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
+using BCDT.Infrastructure.Jobs;
 
 // One-off: sinh BCrypt hash cho mật khẩu (dotnet run -- hash-password "Admin@123")
 if (args.Length >= 2 && args[0] == "hash-password")
@@ -311,7 +312,17 @@ app.MapControllers();
 // Dashboard chỉ map khi ServerEnabled (instance chạy job); instance khác vẫn enqueue được nhưng không có /hangfire
 var hangfirePath = builder.Configuration["Hangfire:DashboardPath"] ?? "/hangfire";
 if (hangfireServerEnabled)
+{
     app.MapHangfireDashboard(hangfirePath);
+
+    // CK-02: Recurring job tự động tạo kỳ báo cáo – chạy hàng ngày lúc 1:00 AM UTC
+    var recurringJobs = app.Services.GetRequiredService<IRecurringJobManager>();
+    recurringJobs.AddOrUpdate<AutoCreateReportingPeriodJob>(
+        "auto-create-reporting-period",
+        job => job.ExecuteAsync(CancellationToken.None),
+        "0 1 * * *",    // daily at 01:00 UTC
+        new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+}
 
 app.MapGet("/", () => Results.Redirect("/health"));
 app.MapHealthChecks("/health");
