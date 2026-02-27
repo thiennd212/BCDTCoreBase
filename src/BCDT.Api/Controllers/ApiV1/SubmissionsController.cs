@@ -263,6 +263,7 @@ public class SubmissionsController : ControllerBase
     }
 
     /// <summary>Gửi submission (Draft → Submitted), tạo WorkflowInstance nếu form có cấu hình workflow.</summary>
+    [Authorize(Policy = "Submission.Submit")]
     [HttpPost("{id:long}/submit")]
     [ProducesResponseType(typeof(ApiSuccessResponse<WorkflowInstanceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

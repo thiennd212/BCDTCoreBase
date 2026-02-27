@@ -187,6 +187,28 @@ public class ReportSubmissionService : IReportSubmissionService
                     return Result.Fail<ReportSubmissionDto>("DEADLINE_PASSED", $"Đã quá hạn nộp ({period.Deadline:dd/MM/yyyy}). Biểu mẫu không cho phép nộp trễ.");
             }
 
+            // Validate required rows: nếu form có hàng IsRequired, phải có ít nhất 1 ReportDataRow
+            var sheetIds = await _db.FormSheets
+                .AsNoTracking()
+                .Where(s => s.FormDefinitionId == entity.FormDefinitionId)
+                .Select(s => s.Id)
+                .ToListAsync(cancellationToken);
+            if (sheetIds.Count > 0)
+            {
+                var hasRequired = await _db.FormRows
+                    .AsNoTracking()
+                    .AnyAsync(r => sheetIds.Contains(r.FormSheetId) && r.IsRequired, cancellationToken);
+                if (hasRequired)
+                {
+                    var dataCount = await _db.ReportDataRows
+                        .AsNoTracking()
+                        .Where(d => d.SubmissionId == entity.Id)
+                        .CountAsync(cancellationToken);
+                    if (dataCount == 0)
+                        return Result.Fail<ReportSubmissionDto>("VALIDATION_FAILED", "Vui lòng điền đủ các trường bắt buộc trước khi nộp báo cáo.");
+                }
+            }
+
             entity.SubmittedAt = DateTime.UtcNow;
             entity.SubmittedBy = updatedBy;
         }

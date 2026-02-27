@@ -1,37 +1,38 @@
-import { apiClient } from './apiClient'
+import { apiClient, tokenStore } from './apiClient'
 import type { LoginRequest, LoginResponse, RefreshResponse, UserInfoDto, UserRoleItemDto } from '../types/auth.types'
-import { setStoredToken, setStoredRefreshToken, getStoredRefreshToken } from './apiClient'
 
 export const authApi = {
   login: async (body: LoginRequest): Promise<LoginResponse> => {
-    const res = await apiClient.post<{ success: boolean; data: LoginResponse }>('/api/v1/auth/login', body)
+    const res = await apiClient.post<{ success: boolean; data: LoginResponse }>(
+      '/api/v1/auth/login',
+      body,
+      { withCredentials: true },
+    )
     const data = res.data?.data
     if (!data?.accessToken) throw new Error('Đăng nhập thất bại')
-    setStoredToken(data.accessToken)
-    if (data.refreshToken) setStoredRefreshToken(data.refreshToken)
+    tokenStore.set(data.accessToken)
     return data
   },
 
   refresh: async (): Promise<RefreshResponse> => {
-    const refreshToken = getStoredRefreshToken()
-    if (!refreshToken) throw new Error('Không có refresh token')
-    const res = await apiClient.post<{ success: boolean; data: RefreshResponse }>('/api/v1/auth/refresh', {
-      refreshToken,
-    })
+    const res = await apiClient.post<{ success: boolean; data: RefreshResponse }>(
+      '/api/v1/auth/refresh',
+      {},
+      { withCredentials: true },
+    )
     const data = res.data?.data
     if (!data?.accessToken) throw new Error('Refresh thất bại')
+    tokenStore.set(data.accessToken)
     return data
   },
 
   logout: async (): Promise<void> => {
-    const refreshToken = getStoredRefreshToken()
-    if (refreshToken) {
-      try {
-        await apiClient.post('/api/v1/auth/logout', { refreshToken })
-      } catch {
-        // Bỏ qua lỗi (mạng, 401): vẫn xóa token ở client
-      }
-    }
+    await apiClient.post(
+      '/api/v1/auth/logout',
+      {},
+      { withCredentials: true },
+    )
+    tokenStore.clear()
   },
 
   me: async (): Promise<UserInfoDto> => {

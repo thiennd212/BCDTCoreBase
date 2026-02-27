@@ -16,4 +16,7 @@ public interface IFormDefinitionService
 
     /// <summary>Tạo biểu mẫu từ file template Excel: trích xuất số sheet, cột, format từ template; lưu template + TemplateDisplayJson.</summary>
     Task<Result<FormDefinitionDto>> CreateFromTemplateAsync(byte[] templateFileBytes, string fileName, string formName, string? code, int createdBy, CancellationToken cancellationToken = default);
+
+    /// <summary>Clone biểu mẫu: copy FormDefinition + FormVersion + FormSheet + FormColumn + FormRow (chỉ cấu trúc, không copy ReportSubmission/data).</summary>
+    Task<Result<FormDefinitionDto>> CloneAsync(int sourceId, CloneFormDefinitionRequest request, int createdBy, CancellationToken cancellationToken = default);
 }

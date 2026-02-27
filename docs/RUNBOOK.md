@@ -148,6 +148,17 @@ Không dùng CDN công cộng; host static (build FE) trên IIS/nginx trong mạ
 
 ---
 
+## 8.4. CI/CD (GitHub Actions)
+
+GitHub Actions tự động chạy khi **push** hoặc **pull_request** lên branch `main`.
+
+- **Build BE:** `dotnet restore` → `dotnet build src/BCDT.Api/BCDT.Api.csproj --configuration Release`
+- **Build FE:** `npm ci` → `npm run build` (trong `src/bcdt-web`)
+- **File workflow:** `.github/workflows/ci.yml`
+- Hai job `build-backend` và `build-frontend` chạy song song.
+
+---
+
 ## 9. Troubleshooting nhanh
 
 | Vấn đề | Gợi ý |

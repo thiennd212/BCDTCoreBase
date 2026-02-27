@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { getStoredToken, clearStoredToken, clearStoredRefreshToken, getStoredCurrentRole, setStoredCurrentRole, clearStoredCurrentRole } from '../api/apiClient'
+import { tokenStore, getStoredCurrentRole, setStoredCurrentRole, clearStoredCurrentRole } from '../api/apiClient'
 import { authApi } from '../api/authApi'
 import type { UserInfoDto, UserRoleItemDto } from '../types/auth.types'
 
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
-    token: getStoredToken(),
+    token: tokenStore.get(),
     user: null,
     loading: true,
     currentRole: getStoredCurrentRole(),
@@ -34,23 +34,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const loadUser = useCallback(async () => {
-    const token = getStoredToken()
     const storedRole = getStoredCurrentRole()
-    if (!token) {
-      setState({ token: null, user: null, loading: false, currentRole: storedRole })
-      return
-    }
     try {
       const user = await authApi.me()
-      setState((prev) => ({ ...prev, token, user, loading: false }))
+      const token = tokenStore.get()
+      setState((prev) => ({ ...prev, token, user, loading: false, currentRole: storedRole ?? prev.currentRole }))
       // Đăng nhập lần đầu hoặc chưa có vai trò lưu: lấy danh sách vai trò và chọn vai trò đầu tiên
       if (!storedRole) {
         const roles = await authApi.getMyRoles()
         if (roles.length > 0) setCurrentRole(roles[0])
       }
     } catch {
-      clearStoredToken()
-      clearStoredRefreshToken()
       setState({ token: null, user: null, loading: false, currentRole: storedRole })
     }
   }, [setCurrentRole])
@@ -71,8 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout()
     } finally {
-      clearStoredToken()
-      clearStoredRefreshToken()
+      tokenStore.clear()
       clearStoredCurrentRole()
       setState({ token: null, user: null, loading: false, currentRole: null })
     }

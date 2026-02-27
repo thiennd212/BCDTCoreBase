@@ -33,6 +33,8 @@ using BCDT.Infrastructure.Services.ReportingPeriod;
 using BCDT.Infrastructure.Services.Workflow;
 using BCDT.Infrastructure.Services.Role;
 using BCDT.Infrastructure.Services.Permission;
+using BCDT.Application.Common.Authorization;
+using BCDT.Infrastructure.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
@@ -183,6 +185,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, PermissionAuthorizationHandler>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("FormStructureAdmin", policy =>
@@ -193,6 +196,12 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("SYSTEM_ADMIN"));
     options.AddPolicy("AdminManageOrg", policy =>
         policy.RequireRole("SYSTEM_ADMIN"));
+    options.AddPolicy("Form.View", policy =>
+        policy.Requirements.Add(new PermissionRequirement("Form.View")));
+    options.AddPolicy("Form.Edit", policy =>
+        policy.Requirements.Add(new PermissionRequirement("Form.Edit")));
+    options.AddPolicy("Submission.Submit", policy =>
+        policy.Requirements.Add(new PermissionRequirement("Submission.Submit")));
 });
 
 // Prod-13 (R7): Rate limiting theo IP / user để chống abuse
@@ -265,6 +274,7 @@ builder.Services.AddScoped<IWorkflowExecutionService, WorkflowExecutionService>(
 builder.Services.AddScoped<IReportingFrequencyService, ReportingFrequencyService>();
 builder.Services.AddScoped<IReportingPeriodService, ReportingPeriodService>();
 builder.Services.AddScoped<IAggregationService, AggregationService>();
+builder.Services.AddScoped<IReportSummaryService, ReportSummaryService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ISubmissionPdfService, SubmissionPdfService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();

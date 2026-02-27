@@ -156,6 +156,52 @@ public class ReportingPeriodService : IReportingPeriodService
         return Result.Ok<object>(new { });
     }
 
+    public async Task<Result<PeriodSummaryExportDto>> GetSummaryExportAsync(int periodId, CancellationToken cancellationToken = default)
+    {
+        var periodExists = await _db.ReportingPeriods.AnyAsync(p => p.Id == periodId, cancellationToken);
+        if (!periodExists)
+            return Result.Fail<PeriodSummaryExportDto>("NOT_FOUND", "Kỳ báo cáo không tồn tại.");
+
+        var submissions = await _db.ReportSubmissions
+            .AsNoTracking()
+            .Where(s => s.ReportingPeriodId == periodId && !s.IsDeleted)
+            .Select(s => new { s.Id, s.OrganizationId })
+            .ToListAsync(cancellationToken);
+
+        var submissionIds = submissions.Select(s => s.Id).ToList();
+        var submissionMap = submissions.ToDictionary(s => s.Id, s => s.OrganizationId);
+
+        var summaries = await _db.ReportSummaries
+            .AsNoTracking()
+            .Where(s => submissionIds.Contains(s.SubmissionId))
+            .ToListAsync(cancellationToken);
+
+        var rows = summaries.Select(s => new PeriodSummaryRowDto
+        {
+            SubmissionId = s.SubmissionId,
+            OrganizationId = submissionMap.GetValueOrDefault(s.SubmissionId),
+            SheetIndex = s.SheetIndex,
+            DataRowCount = s.DataRowCount,
+            TotalValue1 = s.TotalValue1,
+            TotalValue2 = s.TotalValue2,
+            TotalValue3 = s.TotalValue3,
+            TotalValue4 = s.TotalValue4,
+            TotalValue5 = s.TotalValue5,
+            TotalValue6 = s.TotalValue6,
+            TotalValue7 = s.TotalValue7,
+            TotalValue8 = s.TotalValue8,
+            TotalValue9 = s.TotalValue9,
+            TotalValue10 = s.TotalValue10
+        }).ToList();
+
+        return Result.Ok(new PeriodSummaryExportDto
+        {
+            PeriodId = periodId,
+            ExportedAt = DateTime.UtcNow,
+            Rows = rows
+        });
+    }
+
     private static ReportingPeriodDto MapToDto(ReportingPeriodEntity x) => new()
     {
         Id = x.Id,

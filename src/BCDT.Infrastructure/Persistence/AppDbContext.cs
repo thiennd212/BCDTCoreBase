@@ -81,6 +81,7 @@ public class AppDbContext : DbContext
             e.ToTable("BCDT_RefreshToken");
             e.HasKey(x => x.Id);
             e.Property(x => x.Token).HasMaxLength(500);
+            e.Property(x => x.ReplacedByToken).HasMaxLength(500);
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
         });
 

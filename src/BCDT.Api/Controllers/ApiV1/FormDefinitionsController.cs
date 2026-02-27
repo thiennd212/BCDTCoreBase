@@ -99,10 +99,12 @@ public class FormDefinitionsController : ControllerBase
     {
         var result = await _formDefinitionService.GetByIdAsync(id, cancellationToken);
         if (!result.IsSuccess)
+        {
+            if (result.Code == "NOT_FOUND")
+                return NotFound(new ApiErrorResponse(result.Code, result.Message));
             return BadRequest(new ApiErrorResponse(result.Code, result.Message));
-        if (result.Data == null)
-            return NotFound(new ApiErrorResponse("NOT_FOUND", "Biểu mẫu không tồn tại."));
-        return Ok(new ApiSuccessResponse<FormDefinitionDto>(result.Data));
+        }
+        return Ok(new ApiSuccessResponse<FormDefinitionDto>(result.Data!));
     }
 
     /// <summary>Lấy biểu mẫu theo Code.</summary>
@@ -162,7 +164,7 @@ public class FormDefinitionsController : ControllerBase
         }
         var bytes = result.Data!;
         var form = await _formDefinitionService.GetByIdAsync(id, cancellationToken);
-        var fileName = form.Data != null ? $"{form.Data.Code}_template.xlsx" : "form_template.xlsx";
+        var fileName = form.IsSuccess ? $"{form.Data!.Code}_template.xlsx" : "form_template.xlsx";
         return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
@@ -208,6 +210,7 @@ public class FormDefinitionsController : ControllerBase
 
     /// <summary>Tạo biểu mẫu mới.</summary>
     [Authorize(Policy = "FormStructureAdmin")]
+    [Authorize(Policy = "Form.Edit")]
     [HttpPost]
     [Produces("application/json")]
     [ProducesResponseType(typeof(ApiSuccessResponse<FormDefinitionDto>), StatusCodes.Status200OK)]
@@ -261,5 +264,25 @@ public class FormDefinitionsController : ControllerBase
             return BadRequest(new ApiErrorResponse(result.Code, result.Message));
         }
         return Ok(new ApiSuccessResponse<object>(new { }));
+    }
+
+    /// <summary>Clone biểu mẫu: copy toàn bộ cấu trúc (FormVersion, FormSheet, FormColumn, FormRow) sang biểu mẫu mới với Code và Name mới.</summary>
+    [Authorize(Policy = "FormStructureAdmin")]
+    [HttpPost("{id:int}/clone")]
+    [Produces("application/json")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<FormDefinitionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Clone(int id, [FromBody] CloneFormDefinitionRequest request, CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUserService.GetUserId() ?? -1;
+        var result = await _formDefinitionService.CloneAsync(id, request, userId, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            if (result.Code == "NOT_FOUND") return NotFound(new ApiErrorResponse(result.Code, result.Message));
+            if (result.Code == "CONFLICT") return Conflict(new ApiErrorResponse(result.Code, result.Message));
+            return BadRequest(new ApiErrorResponse(result.Code, result.Message));
+        }
+        return Ok(new ApiSuccessResponse<FormDefinitionDto>(result.Data!));
     }
 }

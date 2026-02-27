@@ -49,4 +49,19 @@ Ghi entry vào [memory/DECISIONS.md](../../memory/DECISIONS.md) khi thay đổi 
 | Task 1.2 | Rà RUNBOOK 10 & REVIEW_PRODUCTION_CA_NUOC khi go-live (Depends on 1.1) | [Task_1_2_Ra_RUNBOOK_10_REVIEW_PRODUCTION.md](Phase_01_TONG_HOP_Production_readiness/Task_1_2_Ra_RUNBOOK_10_REVIEW_PRODUCTION.md) |
 | Task 1.3 | (Tùy chọn) Công việc tùy chọn TONG_HOP 3.7 (Depends on 1.1) | [Task_1_3_Cong_viec_tuy_chon_TONG_HOP_3_7.md](Phase_01_TONG_HOP_Production_readiness/Task_1_3_Cong_viec_tuy_chon_TONG_HOP_3_7.md) |
 
-**Phase summary:** *(sẽ cập nhật khi kết thúc Phase 1)*
+**Phase summary:** Điều phối theo TONG_HOP và Production readiness. Trạng thái Phase 1 chờ User kích hoạt khi cần go-live.
+
+---
+
+## Phase 2 – Sprint 1: Bảo mật & Nền tảng kiểm thử
+
+**Hoàn thành:** 2026-02-27 · **4/4 tasks** · Build pass
+
+| Task | Mô tả | Trạng thái | Log |
+|------|--------|------------|-----|
+| Task 2.1 | JWT Token Storage: localStorage → in-memory + httpOnly cookie `bc_refresh_token` | ✅ Done | [Task_2_1_JWT_Storage_Fix.md](Phase_02_Sprint_1_Security_Quality/Task_2_1_JWT_Storage_Fix.md) |
+| Task 2.2 | Auth Minor Gaps: Refresh token rotation + Permission-based authorization handler | ✅ Done | [Task_2_2_Auth_Minor_Gaps.md](Phase_02_Sprint_1_Security_Quality/Task_2_2_Auth_Minor_Gaps.md) |
+| Task 2.3 | CI/CD Pipeline: GitHub Actions build BE + FE tự động khi push/PR lên main | ✅ Done | [Task_2_3_CICD_Pipeline.md](Phase_02_Sprint_1_Security_Quality/Task_2_3_CICD_Pipeline.md) |
+| Task 2.4 | Backend Unit Tests: BCDT.Tests project, 15 tests (FormDefinition, Submission, Auth) pass | ✅ Done | [Task_2_4_Backend_Unit_Tests.md](Phase_02_Sprint_1_Security_Quality/Task_2_4_Backend_Unit_Tests.md) |
+
+**Phase summary:** Sprint 1 hoàn thành toàn bộ. Điểm cần theo dõi: (1) `FormDefinitionService.GetByIdAsync` trả `Result.Ok(null)` thay vì NOT_FOUND – nên fix ở sprint sau; (2) CI cần push lên `main` để xác nhận green lần đầu; (3) E2E đầy đủ cần BE chạy tại port 5080.

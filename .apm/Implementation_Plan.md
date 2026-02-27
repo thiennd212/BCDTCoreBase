@@ -1,7 +1,7 @@
 # BCDT – APM Implementation Plan (Điều phối)
 
 **Memory Strategy:** Dynamic-MD
-**Last Modification:** Manager Agent 1 – Task 1.1 marked Completed (retroactive: Prod-1..15 done outside APM by 2026-02-26).
+**Last Modification:** Manager Agent (2026-02-27) – Added Phase 2 Sprint 1 (S1.1–S1.4): JWT storage fix, auth gaps, CI/CD pipeline, backend unit tests. Based on PM Agent Sprint_1_Plan.md.
 **Project Overview:** Plan điều phối công việc BCDT dựa trên snapshot và state hiện tại: ưu tiên theo TONG_HOP (theo dõi triển khai production cả nước, công việc tùy chọn 3.7); tuân thủ AI_WORK_PROTOCOL (scope, verify, DECISIONS); task → tài liệu + Agent/Skill theo TONG_HOP 3.2 và block "Cách giao AI" (3.3, 3.5, 3.7). Không khám phá lại repo — nguồn sự thật: docs/AI_PROJECT_SNAPSHOT.md, memory/AI_WORK_PROTOCOL.md, memory/DECISIONS.md, memory/project_state.md.
 
 ---
@@ -49,6 +49,70 @@
 3. Thực hiện theo block; tuân thủ scope và MUST-ASK (AI_WORK_PROTOCOL).
 4. Verify (build, E2E nếu FE, Postman/checklist); báo Pass/Fail từng bước.
 5. Khi xong: cập nhật TONG_HOP theo bcdt-update-tong-hop-after-task.
+
+---
+
+---
+
+## Phase 2: Sprint 1 – Bảo mật & Nền tảng kiểm thử
+
+### Task 2.1 – Fix JWT Token Storage (localStorage → memory/httpOnly cookie) – Agent_Security + Agent_Backend + Agent_Frontend
+
+- **Objective:** Chuyển JWT access token khỏi localStorage (XSS attack vector) sang in-memory JS variable; refresh token sang httpOnly cookie hoặc giải pháp an toàn tương đương. Đây là MUST-ASK task – Agent_Security phải thiết kế chiến lược và xác nhận với User trước khi implement.
+- **Output:** JWT không còn lưu localStorage; auth flow (login, refresh, logout) hoạt động đúng; E2E 21 tests pass; Memory Log với decision ghi vào DECISIONS.md.
+- **Guidance:** MUST-ASK bắt buộc tại Step 1 (trước khi viết code). Tham chiếu: `docs/de_xuat_trien_khai/B1_JWT.md`, `docs/de_xuat_trien_khai/RA_SOAT_REFRESH_TOKEN.md`, `src/bcdt-web/src/context/AuthContext.tsx`, `src/bcdt-web/src/api/axiosInstance.ts`. Constitution Principle II (Security-First). Ghi DECISIONS.md.
+
+**Steps:**
+1. [Agent_Security] Phân tích flow JWT hiện tại (localStorage). Thiết kế chiến lược thay thế: Option A (memory-only) vs Option B (httpOnly cookie). Trình bày trade-offs. **DỪNG – MUST-ASK: chờ User chọn option trước khi tiếp.**
+2. [Agent_Backend] Nếu chọn Option B: thêm Set-Cookie header vào `/auth/login` và `/auth/refresh` responses. Build pass.
+3. [Agent_Frontend] Cập nhật `AuthContext.tsx` + `axiosInstance.ts` theo strategy đã chọn. Xóa localStorage token access. Build pass.
+4. [Agent_Security] Review lại sau khi implement. Verify E2E 21 tests pass. Ghi DECISIONS.md.
+
+---
+
+### Task 2.2 – Fix Auth Minor Gaps (B1-B3 review) – Agent_Backend
+
+- **Objective:** Fix 2 gap Minor từ `REVIEW_NGHIEP_VU_MODULE_AUTH_B1_B3.md`: (1) policy permission gap, (2) refresh token rotation gap.
+- **Output:** 2 gaps closed; build pass; Postman auth flow test pass.
+- **Guidance:** Đọc `docs/de_xuat_trien_khai/REVIEW_NGHIEP_VU_MODULE_AUTH_B1_B3.md` để xác định gap cụ thể trước khi code. **Depends on: Task 2.1 Output** (auth flow đã ổn định).
+
+**Steps:**
+1. Đọc REVIEW_NGHIEP_VU_MODULE_AUTH_B1_B3.md – xác định chính xác 2 gap Minor.
+2. Fix gap (1): policy permission – implement theo recommendation.
+3. Fix gap (2): refresh token rotation – implement theo recommendation.
+4. Build BE pass. Test Postman: login → refresh → logout flow.
+5. Cập nhật TONG_HOP theo bcdt-update-tong-hop-after-task.
+
+---
+
+### Task 2.3 – CI/CD Pipeline (GitHub Actions) – Agent_DevOps
+
+- **Objective:** Tạo GitHub Actions workflow tự động build BE + build FE khi có PR/push lên main branch. Loại bỏ rủi ro "không có automated gate".
+- **Output:** `.github/workflows/ci.yml`; CI chạy green trên GitHub; RUNBOOK cập nhật.
+- **Guidance:** Đọc `docs/RUNBOOK.md` mục 6 (build steps). Tham chiếu `src/bcdt-web/package.json`. Không cần DB service cho build-only CI. Song song với Task 2.4.
+
+**Steps:**
+1. Tạo `.github/workflows/ci.yml`: trigger on push/PR to main.
+2. Job 1 – BE Build: `dotnet restore` + `dotnet build src/BCDT.Api --no-restore`.
+3. Job 2 – FE Build: `npm ci` + `npm run build` trong `src/bcdt-web`.
+4. Verify: push test branch → CI green.
+5. Cập nhật `docs/RUNBOOK.md` – thêm mục CI/CD.
+
+---
+
+### Task 2.4 – Backend Unit Tests (xUnit) – Agent_Backend
+
+- **Objective:** Tạo `BCDT.Tests` project với unit tests cho 3 service quan trọng nhất. Xây dựng nền tảng test coverage cho ongoing development.
+- **Output:** `src/BCDT.Tests/` project; ≥ 15 unit tests pass; `dotnet test` clean.
+- **Guidance:** Dùng xUnit + Moq. EF Core InMemory hoặc SQLite cho DbContext mock. Cover: `FormDefinitionService` (Create, GetById, GetAll paginated), `WorkflowService` (Submit, Approve, Reject state transitions), `SubmissionService` (Create, GetWorkbookData mock). Song song với Task 2.3.
+
+**Steps:**
+1. Tạo `src/BCDT.Tests/BCDT.Tests.csproj` (xUnit + Moq + EF InMemory).
+2. Thêm reference trong solution file.
+3. Viết tests cho `FormDefinitionService` (≥ 5 tests).
+4. Viết tests cho `WorkflowService` (≥ 5 tests: state transitions).
+5. Viết tests cho `SubmissionService` (≥ 5 tests).
+6. `dotnet test` → all pass. Báo cáo coverage.
 
 ---
 

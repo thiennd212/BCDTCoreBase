@@ -26,7 +26,7 @@ public class FormDefinitionService : IFormDefinitionService
             .Where(f => f.Id == id && !f.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
         if (entity == null)
-            return Result.Ok<FormDefinitionDto?>(null);
+            return Result.Fail<FormDefinitionDto?>("NOT_FOUND", "Form definition not found.");
         return Result.Ok<FormDefinitionDto?>(MapToDto(entity));
     }
 
@@ -319,6 +319,194 @@ public class FormDefinitionService : IFormDefinitionService
         await _db.SaveChangesAsync(cancellationToken);
 
         var created = await _db.FormDefinitions.AsNoTracking().FirstAsync(f => f.Id == entity.Id, cancellationToken);
+        return Result.Ok(MapToDto(created));
+    }
+
+    public async Task<Result<FormDefinitionDto>> CloneAsync(int sourceId, CloneFormDefinitionRequest request, int createdBy, CancellationToken cancellationToken = default)
+    {
+        var source = await _db.FormDefinitions
+            .AsNoTracking()
+            .Where(f => f.Id == sourceId && !f.IsDeleted)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (source == null)
+            return Result.Fail<FormDefinitionDto>("NOT_FOUND", "Biểu mẫu nguồn không tồn tại.");
+
+        if (await _db.FormDefinitions.AnyAsync(f => f.Code == request.NewCode && !f.IsDeleted, cancellationToken))
+            return Result.Fail<FormDefinitionDto>("CONFLICT", "Code biểu mẫu đã tồn tại.");
+
+        var now = DateTime.UtcNow;
+
+        var newForm = new FormDefinition
+        {
+            Code = request.NewCode,
+            Name = request.NewName,
+            Description = source.Description,
+            FormType = source.FormType,
+            CurrentVersion = source.CurrentVersion,
+            ReportingFrequencyId = source.ReportingFrequencyId,
+            DeadlineOffsetDays = source.DeadlineOffsetDays,
+            AllowLateSubmission = source.AllowLateSubmission,
+            RequireApproval = source.RequireApproval,
+            AutoCreateReport = source.AutoCreateReport,
+            TemplateFile = source.TemplateFile,
+            TemplateFileName = source.TemplateFileName,
+            TemplateDisplayJson = source.TemplateDisplayJson,
+            Status = "Draft",
+            IsActive = false,
+            CreatedAt = now,
+            CreatedBy = createdBy,
+            IsDeleted = false
+        };
+        _db.FormDefinitions.Add(newForm);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var sourceVersions = await _db.FormVersions
+            .AsNoTracking()
+            .Where(v => v.FormDefinitionId == sourceId)
+            .ToListAsync(cancellationToken);
+        foreach (var v in sourceVersions)
+        {
+            _db.FormVersions.Add(new FormVersion
+            {
+                FormDefinitionId = newForm.Id,
+                VersionNumber = v.VersionNumber,
+                VersionName = v.VersionName,
+                ChangeDescription = v.ChangeDescription,
+                TemplateFile = v.TemplateFile,
+                TemplateFileName = v.TemplateFileName,
+                StructureJson = v.StructureJson,
+                IsActive = v.IsActive,
+                CreatedAt = now,
+                CreatedBy = createdBy
+            });
+        }
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var sourceSheets = await _db.FormSheets
+            .AsNoTracking()
+            .Where(s => s.FormDefinitionId == sourceId)
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync(cancellationToken);
+
+        foreach (var sheet in sourceSheets)
+        {
+            var newSheet = new FormSheet
+            {
+                FormDefinitionId = newForm.Id,
+                SheetIndex = sheet.SheetIndex,
+                SheetName = sheet.SheetName,
+                DisplayName = sheet.DisplayName,
+                Description = sheet.Description,
+                IsDataSheet = sheet.IsDataSheet,
+                IsVisible = sheet.IsVisible,
+                DisplayOrder = sheet.DisplayOrder,
+                DataStartRow = sheet.DataStartRow,
+                CreatedAt = now,
+                CreatedBy = createdBy
+            };
+            _db.FormSheets.Add(newSheet);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var sourceColumns = await _db.FormColumns
+                .AsNoTracking()
+                .Where(c => c.FormSheetId == sheet.Id)
+                .OrderBy(c => c.DisplayOrder)
+                .ToListAsync(cancellationToken);
+
+            var columnIdMap = new Dictionary<int, int>();
+            foreach (var col in sourceColumns)
+            {
+                var newCol = new FormColumn
+                {
+                    FormSheetId = newSheet.Id,
+                    ParentId = null,
+                    IndicatorId = col.IndicatorId,
+                    ColumnCode = col.ColumnCode,
+                    ColumnName = col.ColumnName,
+                    ColumnGroupName = col.ColumnGroupName,
+                    ColumnGroupLevel2 = col.ColumnGroupLevel2,
+                    ColumnGroupLevel3 = col.ColumnGroupLevel3,
+                    ColumnGroupLevel4 = col.ColumnGroupLevel4,
+                    ExcelColumn = col.ExcelColumn,
+                    LayoutOrder = col.LayoutOrder,
+                    DataType = col.DataType,
+                    IsRequired = col.IsRequired,
+                    IsEditable = col.IsEditable,
+                    IsHidden = col.IsHidden,
+                    DefaultValue = col.DefaultValue,
+                    Formula = col.Formula,
+                    ValidationRule = col.ValidationRule,
+                    ValidationMessage = col.ValidationMessage,
+                    DisplayOrder = col.DisplayOrder,
+                    Width = col.Width,
+                    Format = col.Format,
+                    CreatedAt = now,
+                    CreatedBy = createdBy
+                };
+                _db.FormColumns.Add(newCol);
+                await _db.SaveChangesAsync(cancellationToken);
+                columnIdMap[col.Id] = newCol.Id;
+            }
+
+            foreach (var col in sourceColumns.Where(c => c.ParentId.HasValue))
+            {
+                if (columnIdMap.TryGetValue(col.Id, out var newColId) &&
+                    columnIdMap.TryGetValue(col.ParentId!.Value, out var newParentId))
+                {
+                    var tracked = await _db.FormColumns.FindAsync(new object[] { newColId }, cancellationToken);
+                    if (tracked != null) tracked.ParentId = newParentId;
+                }
+            }
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var sourceRows = await _db.FormRows
+                .AsNoTracking()
+                .Where(r => r.FormSheetId == sheet.Id)
+                .OrderBy(r => r.DisplayOrder)
+                .ToListAsync(cancellationToken);
+
+            var rowIdMap = new Dictionary<int, int>();
+            foreach (var row in sourceRows)
+            {
+                var newRow = new FormRow
+                {
+                    FormSheetId = newSheet.Id,
+                    RowCode = row.RowCode,
+                    RowName = row.RowName,
+                    ExcelRowStart = row.ExcelRowStart,
+                    ExcelRowEnd = row.ExcelRowEnd,
+                    RowType = row.RowType,
+                    IsRepeating = row.IsRepeating,
+                    ReferenceEntityTypeId = row.ReferenceEntityTypeId,
+                    ParentRowId = null,
+                    FormDynamicRegionId = row.FormDynamicRegionId,
+                    DisplayOrder = row.DisplayOrder,
+                    Height = row.Height,
+                    IsEditable = row.IsEditable,
+                    IsRequired = row.IsRequired,
+                    Formula = row.Formula,
+                    IndicatorId = row.IndicatorId,
+                    CreatedAt = now,
+                    CreatedBy = createdBy
+                };
+                _db.FormRows.Add(newRow);
+                await _db.SaveChangesAsync(cancellationToken);
+                rowIdMap[row.Id] = newRow.Id;
+            }
+
+            foreach (var row in sourceRows.Where(r => r.ParentRowId.HasValue))
+            {
+                if (rowIdMap.TryGetValue(row.Id, out var newRowId) &&
+                    rowIdMap.TryGetValue(row.ParentRowId!.Value, out var newParentRowId))
+                {
+                    var tracked = await _db.FormRows.FindAsync(new object[] { newRowId }, cancellationToken);
+                    if (tracked != null) tracked.ParentRowId = newParentRowId;
+                }
+            }
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        var created = await _db.FormDefinitions.AsNoTracking().FirstAsync(f => f.Id == newForm.Id, cancellationToken);
         return Result.Ok(MapToDto(created));
     }
 

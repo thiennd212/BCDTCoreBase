@@ -11,4 +11,5 @@ public interface IReportingPeriodService
     Task<Result<ReportingPeriodDto>> CreateAsync(CreateReportingPeriodRequest request, int createdBy, CancellationToken cancellationToken = default);
     Task<Result<ReportingPeriodDto>> UpdateAsync(int id, UpdateReportingPeriodRequest request, int updatedBy, CancellationToken cancellationToken = default);
     Task<Result<object>> DeleteAsync(int id, CancellationToken cancellationToken = default);
+    Task<Result<PeriodSummaryExportDto>> GetSummaryExportAsync(int periodId, CancellationToken cancellationToken = default);
 }
