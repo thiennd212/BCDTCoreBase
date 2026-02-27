@@ -18,6 +18,7 @@ import {
 } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined, UploadOutlined, DownloadOutlined, CopyOutlined } from '@ant-design/icons'
 import { getApiErrorMessage } from '../api/apiClient'
+import { QueryErrorDisplay } from '../components/ErrorPage'
 import { formsApi } from '../api/formsApi'
 import { reportingFrequenciesApi } from '../api/reportingFrequenciesApi'
 import type {
@@ -289,13 +290,7 @@ export function FormsPage() {
     },
   ]
 
-  if (error) {
-    return (
-      <Card>
-        <Text type="danger">Lỗi: {(error as Error).message}</Text>
-      </Card>
-    )
-  }
+  if (error) return <QueryErrorDisplay error={error} />
 
   return (
     <>

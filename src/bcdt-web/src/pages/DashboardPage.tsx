@@ -8,8 +8,9 @@ import {
   ExclamationCircleOutlined,
 } from '@ant-design/icons'
 import { dashboardApi } from '../api/dashboardApi'
+import { EmptyState } from '../components/EmptyState'
 
-const { Title, Text } = Typography
+const { Title } = Typography
 
 export function DashboardPage() {
   const { data: adminStats, isLoading: loadingAdmin } = useQuery({
@@ -70,7 +71,7 @@ export function DashboardPage() {
                 pagination={false}
               />
             ) : (
-              <Text type="secondary">Chưa có dữ liệu</Text>
+              <EmptyState compact description="Chưa có dữ liệu" />
             )}
           </Card>
         </Col>
@@ -89,7 +90,7 @@ export function DashboardPage() {
                 pagination={false}
               />
             ) : (
-              <Text type="secondary">Chưa có dữ liệu</Text>
+              <EmptyState compact description="Chưa có dữ liệu" />
             )}
           </Card>
         </Col>
@@ -111,7 +112,7 @@ export function DashboardPage() {
                 pagination={false}
               />
             ) : (
-              <Text type="secondary">Không có báo cáo nháp hoặc yêu cầu chỉnh sửa</Text>
+              <EmptyState compact description="Không có báo cáo nháp hoặc yêu cầu chỉnh sửa" />
             )}
           </Card>
         </Col>
@@ -131,7 +132,7 @@ export function DashboardPage() {
                 pagination={false}
               />
             ) : (
-              <Text type="secondary">Không có nhiệm vụ chờ duyệt</Text>
+              <EmptyState compact description="Không có nhiệm vụ chờ duyệt" />
             )}
           </Card>
         </Col>
