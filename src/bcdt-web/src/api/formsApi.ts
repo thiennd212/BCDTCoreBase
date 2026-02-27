@@ -98,6 +98,16 @@ export const formsApi = {
     return res.data.data
   },
 
+  /** Nhân bản biểu mẫu: tạo bản sao hoàn chỉnh (versions, sheets, columns, rows) với code và tên mới. */
+  clone: async (id: number, body: { newCode: string; newName: string }): Promise<FormDefinitionDto> => {
+    const res = await apiClient.post<{ success: boolean; data: FormDefinitionDto }>(
+      `/api/v1/forms/${id}/clone`,
+      body
+    )
+    if (!res.data?.data) throw new Error('Nhân bản biểu mẫu thất bại')
+    return res.data.data
+  },
+
   /** Upload file Excel template. */
   uploadTemplate: async (formId: number, file: File): Promise<{ formId: number; fileName: string; hasDisplay: boolean }> => {
     const formData = new FormData()
