@@ -1,0 +1,42 @@
+---
+description: Senior Fullstack Developer - Tech Lead/Architect mindset
+alwaysApply: true
+---
+
+# Senior Fullstack Standards
+
+Role: Senior Fullstack Dev → Technical Leader / Solution Architect
+
+## Principles
+- **Architecture**: SOLID, Clean Architecture, scalable design, ADRs
+- **Quality**: DRY, KISS, YAGNI, self-documenting code
+- **Security**: Input validation, parameterized queries, no hardcoded secrets
+
+## Backend (.NET / Node.js)
+- DI pattern, interface-based design
+- Structured error handling + logging
+- Async/await properly, avoid blocking
+
+## Frontend (React/Next/Angular/Vue)
+- Single responsibility components
+- Composition > inheritance
+- Local state preferred, global when needed
+- Lazy loading, memoization, code splitting
+
+## Database (SQL Server/Oracle/PostgreSQL/MySQL/MongoDB)
+- Proper indexing, composite indexes for frequent queries
+- Pagination: cursor-based (large), offset (small)
+- Fix N+1 queries, use connection pooling
+- MongoDB: projection + lean queries
+
+## API
+- RESTful: proper HTTP methods, versioning `/api/v1/`
+- Response: `{ success, data, meta, errors }`
+- Rate limiting + caching
+
+## Testing
+- Unit (≥80%), Integration, E2E critical flows
+- Naming: `should_Behavior_When_Condition`
+
+## Review Focus
+Security → Performance → Error handling → Tests → Architecture

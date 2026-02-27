@@ -1,0 +1,58 @@
+---
+description: Base và rule cho dữ liệu phân cấp (Organization, Menu, ReferenceEntity, …) – API all=true, buildTree, Table tree, TreeSelect
+globs: **/*.tsx,**/*.ts,**/Controllers/**/*.cs,**/Services/**/*.cs
+alwaysApply: false
+---
+
+# Dữ liệu phân cấp (Hierarchical Data)
+
+**Áp dụng khi:** Entity có quan hệ cha–con (ParentId, TreePath, Level): Organization, Menu, ReferenceEntity, Form hierarchy, …
+
+**Tài liệu base (bắt buộc đọc khi triển khai):** [HIERARCHICAL_DATA_BASE_AND_RULE.md](docs/de_xuat_trien_khai/HIERARCHICAL_DATA_BASE_AND_RULE.md) (từ root dự án).
+
+---
+
+## Backend – Convention
+
+| Yêu cầu | Cách làm |
+|---------|----------|
+| **List endpoint hỗ trợ full flat** | Thêm query param **`all`** (bool, optional): khi `all=true` trả về **toàn bộ** bản ghi (flat), không filter theo parentId. Khi không truyền hoặc `all=false` giữ hành vi hiện tại (parentId null = gốc). |
+| **Tùy chọn mở rộng** | Endpoint `GET /api/v1/{resource}/tree` trả về nested `{ children }` khi cần giảm tải FE hoặc payload rất lớn. |
+
+---
+
+## Frontend – Base utils (dùng chung)
+
+| Yêu cầu | Cách làm |
+|---------|----------|
+| **Util generic** | File **`src/utils/treeUtils.ts`**: `buildTree<T>(flat, options?)`, `treeExcludeSelfAndDescendants<T>(tree, selfId)`, type `TreeNode<T>`. Options: `idKey`, `parentKey`, `childrenKey`, `sortBy`. Thuật toán O(n), xử lý an toàn parentId lỗi/vòng tròn. |
+| **Trang list dạng cây** | `useQuery` với `all=true`; `treeData = useMemo(() => buildTree(data, options), [data])`; Table `dataSource={treeData}`, `rowKey="id"` (hoặc idKey tương ứng); **tắt phân trang** hoặc chỉ showTotal; `defaultExpandRowKeys` = id cấp 1 (hoặc gốc), không defaultExpandAllRows khi dữ liệu lớn. |
+| **Form trường “cha”** | Dùng **TreeSelect** (Ant Design), không Select phẳng. treeData từ `buildTree(data)`; **khi sửa** dùng `treeExcludeSelfAndDescendants(tree, editingId)` để không chọn được bản thân và con. Bật `showSearch`, `filterTreeNode`, `allowClear`, placeholder (vd. "Không có (gốc)"). |
+
+---
+
+## Checklist khi thêm/hiển thị dữ liệu phân cấp
+
+1. **Backend:** List endpoint có param `all=true` và khi true trả về toàn bộ (flat).
+2. **FE utils:** Dùng `buildTree<T>` từ `treeUtils.ts` (options idKey/parentKey/sortBy phù hợp entity).
+3. **Trang list:** Table với dataSource = treeData (useMemo), rowKey ổn định, tắt pagination, defaultExpandRowKeys cấp 1.
+4. **Form “cha”:** TreeSelect với treeData; khi sửa loại trừ self + descendants.
+5. **Edge case:** Empty, loading, error; parentId lỗi không crash; xóa node có con theo logic backend.
+
+---
+
+## Mở rộng (khi cần)
+
+- **Lazy load:** Không dùng all=true; load gốc trước, khi expand gọi API `?parentId={id}`, merge children vào cây.
+- **Virtual scroll:** Bật `virtual` cho Table khi số node > 500–1000.
+- **Endpoint /tree:** Dùng khi backend trả về nested; FE dataSource = response.data.
+
+---
+
+## Don't
+
+- Don't hiển thị list phân cấp dạng **flat** Table khi entity có ParentId – dùng **Table tree** (dataSource có children).
+- Don't dùng **Select** phẳng cho trường “cha” khi có dữ liệu cây – dùng **TreeSelect** với treeData.
+- Don't khi sửa cho phép chọn **chính nó hoặc con** làm cha – dùng treeExcludeSelfAndDescendants cho treeData của TreeSelect.
+- Don't build cây trong component mỗi lần render – dùng **useMemo(() => buildTree(data), [data])**.
+- Don't thêm logic build cây riêng cho từng entity – dùng **util generic** buildTree<T> với options.

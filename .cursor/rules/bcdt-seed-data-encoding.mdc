@@ -1,0 +1,49 @@
+---
+description: Seed data UTF-8 / tiếng Việt – tránh mojibake khi chạy sqlcmd
+globs: docs/script_core/sql/**/*.sql,**/seed*.sql
+alwaysApply: false
+---
+
+# Seed data – Encoding tiếng Việt (UTF-8)
+
+## Vấn đề
+
+Script seed chứa tiếng Việt (NVARCHAR, N'...'). Nếu chạy **sqlcmd** không chỉ định UTF-8, file UTF-8 sẽ bị đọc sai code page → **mojibake** (vd. "BÃ¡o cÃ¡o Ä'áº§u tÆ°" thay vì "Báo cáo đầu tư").
+
+## Bắt buộc khi chạy seed bằng sqlcmd
+
+- **File script:** Lưu **UTF-8** (UTF-8 with BOM hoặc UTF-8 không BOM đều được).
+- **Lệnh sqlcmd:** Luôn thêm **-f 65001** (code page UTF-8) cho tham số input file.
+
+```bash
+sqlcmd -S localhost,1433 -d BCDT -U sa -P "..." -f 65001 -i "path/to/seed_xxx.sql" -C
+```
+
+- **PowerShell / script:** Khi gọi sqlcmd cho file seed có tiếng Việt, truyền **-f 65001** vào danh sách tham số (vd. trong `Ensure-TestData.ps1` hoặc script tương tự).
+
+## Script seed có tiếng Việt
+
+- `seed_bao_cao_dau_tu_kkte.sql` – **bắt buộc** `-f 65001`.
+- Các file `seed_test_excel_entry.sql`, `seed_mcp_*.sql`, `seed_*_form.sql` nếu có nội dung tiếng Việt – nên dùng `-f 65001` khi chạy bằng sqlcmd.
+
+## Trong file SQL
+
+- Ở đầu file seed có tiếng Việt, thêm comment nhắc chạy với UTF-8:
+
+```sql
+-- Tiếng Việt: chạy sqlcmd với -f 65001. Ví dụ: sqlcmd ... -f 65001 -i file.sql
+```
+
+## MCP / SSMS
+
+- **MCP execute_sql:** Nếu truyền nội dung file vào query, đảm bảo nội dung đọc từ file UTF-8 (editor/IDE lưu UTF-8).
+- **SSMS:** Mở file UTF-8; khi execute, kết nối và collation thường đã đúng cho NVARCHAR.
+
+## Tóm tắt
+
+| Cách chạy   | Cần làm |
+|------------|--------|
+| sqlcmd -i  | Luôn dùng **-f 65001** với file seed có tiếng Việt |
+| PowerShell | Truyền **-f 65001** vào lệnh sqlcmd khi gọi seed |
+| MCP        | Đọc file UTF-8, truyền đúng nội dung vào query    |
+| SSMS       | Mở file UTF-8, execute bình thường                |

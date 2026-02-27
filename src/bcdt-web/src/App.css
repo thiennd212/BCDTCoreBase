@@ -1,0 +1,153 @@
+#root {
+  min-height: 100vh;
+}
+
+/* ----- Login: full viewport, cân đối, responsive ----- */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.login-card-wrap {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-brand-icon {
+  font-size: 48px;
+  color: var(--ant-color-primary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.login-error {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 480px) {
+  .login-wrap {
+    padding: 16px;
+  }
+}
+
+/* ----- Quản lý đơn vị: cây đơn vị bên trái ----- */
+.org-tree-wrap {
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  min-height: 320px;
+}
+
+.org-tree .ant-tree-list-holder-inner {
+  padding-bottom: 8px;
+}
+
+.org-tree .ant-tree-treenode {
+  padding: 4px 0;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.org-tree .ant-tree-treenode:hover {
+  background-color: #eff6ff;
+}
+
+.org-tree .ant-tree-treenode-selected,
+.org-tree .ant-tree-treenode-selected:hover {
+  background-color: #dbeafe !important;
+}
+
+.org-tree .ant-tree-treenode-selected .ant-tree-title,
+.org-tree .ant-tree-node-selected .ant-tree-title {
+  font-weight: 600;
+}
+
+.org-tree-node-title {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.org-tree-node-label {
+  color: #1f2937;
+  word-break: break-word;
+}
+
+/* ----- Nhập liệu Excel: lưới giống file Excel ----- */
+.excel-sheet-wrap {
+  overflow: auto;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.excel-grid {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.excel-cell {
+  border-right: 1px solid #e8e8e8;
+  border-bottom: 1px solid #e8e8e8;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+}
+
+.excel-cell:last-of-type {
+  border-right: none;
+}
+
+.excel-corner,
+.excel-row-header,
+.excel-col-header {
+  background: #f5f5f5;
+  color: #595959;
+  font-weight: 600;
+  font-size: 12px;
+  user-select: none;
+}
+
+.excel-data-cell {
+  justify-content: stretch;
+  background: #fff;
+}
+
+.excel-cell-input {
+  width: 100%;
+  height: 100%;
+  min-height: 32px;
+  border-radius: 0;
+  background: transparent !important;
+}
+
+.excel-cell-input input,
+.excel-cell-input .ant-input-number-input {
+  text-align: left;
+  font-size: 13px;
+}
+
+.excel-cell-input:hover,
+.excel-cell-input:focus,
+.excel-cell-input.ant-input-number-focused {
+  background: #fff !important;
+}

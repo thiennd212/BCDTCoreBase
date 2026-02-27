@@ -1,0 +1,72 @@
+---
+description: BCDT testing conventions (unit, integration, E2E)
+globs:
+  - "**/*.Tests/**/*.cs"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.tsx"
+alwaysApply: false
+---
+
+# BCDT Testing
+
+## Naming
+
+- **Test method:** `should_Behavior_When_Condition`
+  - Ví dụ: `GetByIdAsync_ReturnsNotFound_WhenIdNotExists`
+  - Ví dụ: `Submit_ReturnsValidationError_WhenRequiredFieldEmpty`
+- **File backend:** `{TênClassHoặcFeature}Tests.cs` (vd: `FormServiceTests.cs`)
+- **File frontend:** `{TênComponent}.test.tsx` hoặc `{TênComponent}.spec.tsx`
+
+## Cấu trúc
+
+- **Arrange – Act – Assert.** Không đặt logic nghiệp vụ phức tạp trong test.
+- Mock repository / external service ở Application layer; không mock Domain entity trừ khi cần.
+
+## Backend (.NET)
+
+- **Framework:** xUnit (hoặc NUnit).
+- **Mock:** Moq hoặc NSubstitute cho interface (IRepository, IExternalService).
+- **Assert:** FluentAssertions (tùy chọn): `result.IsSuccess.Should().BeFalse(); result.Error.Should().Contain("not found");`
+- **Unit test:** Service, Validator — mock repository, gọi method, assert Result/validation.
+- **Integration test:** Controller + Service — dùng WebApplicationFactory hoặc TestServer; gửi HTTP request, assert status và body.
+
+```csharp
+// Unit: Service
+[Fact]
+public async Task GetByIdAsync_ReturnsNotFound_WhenIdNotExists()
+{
+    _repo.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((FormDefinition?)null);
+    var result = await _sut.GetAsync(999);
+    result.IsSuccess.Should().BeFalse();
+    result.Error.Should().Contain("not found");
+}
+```
+
+## Frontend (React)
+
+- **Framework:** Vitest + React Testing Library.
+- **Query:** Theo role, label, testId; tránh phụ thuộc class hoặc cấu trúc DOM nội bộ.
+- **Render:** `render(<Component />)`; `screen.getByRole('button', { name: 'Lưu' })`; `userEvent.click(...)`.
+
+```tsx
+it('should show validation error when required field is empty', async () => {
+  render(<FormEditor />);
+  await userEvent.clear(screen.getByLabelText(/tên/i));
+  await userEvent.click(screen.getByRole('button', { name: /gửi/i }));
+  expect(screen.getByText(/bắt buộc/i)).toBeInTheDocument();
+});
+```
+
+## Script test API (PowerShell)
+
+- **Submission + Upload Excel:** `docs/script_core/test-submission-upload.ps1`. Kiểm tra đầy đủ: login, CRUD submission, GET template, upload Excel (no file / .txt / .xlsx), GET presentation, duplicate 409.
+- **Điều kiện:** API phải chạy trước tại `http://localhost:5080` (vd. `dotnet run --project src/BCDT.Api --launch-profile http`). Script có bước 0 kiểm tra `/health`; nếu API không chạy thì thoát với thông báo rõ.
+- **Kỳ vọng:** 10/10 Pass. Script tương thích PowerShell 5.1 (upload file dùng multipart thủ công, không dùng `-Form`).
+
+## Don't
+
+- Don't test implementation detail (internal state, private method).
+- Don't duplicate test logic với integration test (unit test service, integration test endpoint).
+- Don't bỏ qua test cho business logic quan trọng (submit, workflow, validation).
+- Don't báo test Pass khi chưa chạy API (script submission cần process API đang chạy).

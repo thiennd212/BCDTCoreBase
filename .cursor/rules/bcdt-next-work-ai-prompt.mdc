@@ -1,0 +1,44 @@
+---
+description: Khi đề xuất công việc tiếp theo (TONG_HOP, rà soát tiến độ), luôn thêm gợi ý copy-paste cho AI
+globs: docs/TONG_HOP*.md, docs/**/TONG_HOP*.md
+alwaysApply: true
+---
+
+# Đề xuất công việc tiếp theo – Gợi ý cho AI
+
+## Áp dụng khi
+
+- Rà soát tiến độ và cập nhật `docs/TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md`
+- Đề xuất công việc tiếp theo (bất kể trong file nào)
+- Cập nhật bảng "Đề xuất công việc tiếp theo" hoặc "Ưu tiên" trong tài liệu dự án
+
+## Yêu cầu bắt buộc
+
+Với **mỗi lần** đề xuất công việc tiếp theo:
+
+1. **Luôn thêm mục "Cách giao AI" (hoặc "Gợi ý cho AI")** cho **ít nhất công việc ưu tiên 1** (công việc nên làm tiếp theo).
+2. Nội dung gồm:
+   - **Tiêu đề rõ ràng:** ví dụ `Cách giao AI khi làm B2 (copy-paste gợi ý):`
+   - **Một block copy-paste** (code block) mà user/AI có thể dán ngay để giao task:
+     - Ghi rõ task (vd: "Triển khai B2 – RBAC theo docs/...")
+     - **Agent, Skill, Rules** (nếu có): agent nên dùng, skill, rules áp dụng.
+     - Liệt kê yêu cầu ngắn gọn (đọc tài liệu nào, làm gì, tuân thủ rule gì).
+     - **Bắt buộc:** yêu cầu AI **viết test case** (thêm/cập nhật mục "Kiểm tra cho AI" hoặc checklist trong file đề xuất) và **tự test** (chạy **đủ tất cả** bước trong checklist, **không skip bước nào**, báo Pass/Fail từng bước trước khi báo xong, theo rule always-verify-after-work).
+     - Có thể thêm: "Tạo file đề xuất XXX.md nếu chưa có (theo cấu trúc B1_JWT.md/B3_RLS.md)."
+3. Nếu có **nhiều công việc ưu tiên** (ưu tiên 1, 2) và mỗi task có hướng dẫn riêng trong `de_xuat_trien_khai/`, có thể thêm một block gợi ý cho **ưu tiên 1** là tối thiểu; ưu tiên 2 trở đi có thể ghi ngắn (vd: "Dùng skill bcdt-entity-crud, agent bcdt-org-admin") thay vì block đầy đủ.
+
+## Ví dụ đúng
+
+Trong mục "Đề xuất công việc tiếp theo": có bảng ưu tiên, ngay sau đó có tiêu đề **Cách giao AI khi làm [Task]** và một block copy-paste (code fence) chứa:
+
+- Dòng đầu: task rõ ràng (vd "Triển khai B2 – RBAC theo docs/...").
+- Agent, Skill, Rules (nếu có).
+- Mục "Yêu cầu:" với các mục đánh số: đọc tài liệu nào, làm gì; **viết test case** (checklist trong file đề xuất); **tự test** (chạy checklist, báo Pass/Fail từng bước trước khi báo xong).
+
+Tham chiếu mẫu đầy đủ: mục 8 trong `docs/TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md` (Cách giao AI khi làm B2).
+
+## Không được
+
+- Đề xuất công việc tiếp theo **mà không có** block "Cách giao AI" / "Gợi ý cho AI" cho công việc ưu tiên 1.
+- Block gợi ý **thiếu** yêu cầu **viết test case** và **tự test** (chạy đủ checklist, không skip bước, báo Pass/Fail).
+- Block gợi ý quá chung chung (vd chỉ "Implement B2") mà không có yêu cầu cụ thể, tài liệu tham chiếu, hoặc rule cần tuân thủ.

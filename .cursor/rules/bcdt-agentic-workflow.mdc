@@ -1,0 +1,60 @@
+---
+description: Workflow agentic BCDT – Plan → Execute → Verify → Reflect; tách lập kế hoạch và thi hành để giảm sai
+alwaysApply: true
+---
+
+# BCDT – Agentic workflow (Plan → Execute → Verify → Reflect)
+
+Mọi task BCDT **bắt buộc** theo 4 phase. **Tách rõ Plan và Execute:** không thi hành (sửa code/script) trước khi có bản kế hoạch; không báo xong trước khi Verify Pass; không kết thúc mà bỏ qua Reflect.
+
+---
+
+## 1. Plan (Lập kế hoạch)
+
+- **Trước khi** sửa code, script hoặc config:
+  - Đọc ngữ cảnh: [docs/AI_CONTEXT.md](../../docs/AI_CONTEXT.md), TONG_HOP mục 3.2, 3.3/3.5/3.7 (block "Cách giao AI").
+  - **Liệt kê rõ:** task con, thứ tự bước, file/ thư mục/ agent/ skill cần dùng, rủi ro (vd DB lock, breaking change).
+  - Nêu **làm gì** và **không làm gì** (scope).
+- **Kết quả:** Bản kế hoạch ngắn (có thể dạng bullet) để Execute chỉ làm đúng theo đó. User có thể xác nhận kế hoạch trước khi Execute (tùy task).
+
+---
+
+## 2. Execute (Thi hành)
+
+- **Chỉ** làm theo từng bước đã nêu trong Plan.
+- Dùng đúng Agent/Skill theo TONG_HOP 3.2 và block "Cách giao AI".
+- **Không** thêm scope ngoài kế hoạch (trừ khi user yêu cầu rõ). Nếu phát hiện thiếu bước → cập nhật Plan (ghi rõ) rồi mới làm thêm.
+
+---
+
+## 3. Verify (Kiểm tra)
+
+- **Bước riêng,** bắt buộc trước khi báo xong:
+  - Build: tắt BCDT.Api trước khi build BE; chạy `dotnet build` / `npm run build` (nếu sửa FE).
+  - Checklist: chạy đủ "Kiểm tra cho AI" hoặc *_TEST_CASES.md, Postman (rule **bcdt-postman-test-cases**); FE: DevTools Console/Issues.
+  - **E2E (khi task đụng FE):** chạy `npm run test:e2e` trong `src/bcdt-web` (BE API tại 5080); báo Pass/Fail **từng file spec**. Chi tiết: [docs/E2E_VERIFY.md](../../docs/E2E_VERIFY.md).
+  - **Báo Pass/Fail từng bước.** Nếu Fail → quay lại Execute (sửa) rồi Verify lại; không báo xong đến khi Pass.
+
+Chi tiết: rule **always-verify-after-work**.
+
+---
+
+## 4. Reflect (Rút kinh nghiệm & cập nhật)
+
+- Ghi ngắn: lỗi gặp, cách xử lý, bước dễ sai (nếu có).
+- **Task trong TONG_HOP:** cập nhật TONG_HOP theo rule **bcdt-update-tong-hop-after-task** (mục 2.1, 2.2, 3, 4, 5, 8, Version).
+- Cập nhật block "Cách giao AI" hoặc checklist cho task tiếp theo nếu cần (rule **bcdt-next-work-ai-prompt**).
+- Trả lời user: tóm tắt + verify Pass/Fail + gợi ý `/bcdt-next` hoặc task tiếp.
+
+---
+
+## Tóm tắt
+
+| Phase   | Mục đích        | Không được                          |
+|---------|------------------|--------------------------------------|
+| **Plan**   | Kế hoạch trước khi làm | Execute trước khi có Plan             |
+| **Execute**| Làm đúng theo Plan   | Thêm scope ngoài kế hoạch khi chưa cập nhật Plan |
+| **Verify** | Đảm bảo đúng/đủ  | Báo xong khi chưa chạy checklist / build Pass |
+| **Reflect**| Học & cập nhật   | Bỏ qua cập nhật TONG_HOP khi task thuộc TONG_HOP |
+
+Commands: `/bcdt-task`, `/bcdt-verify`, `/bcdt-auto` đều tuân thủ 4 phase trên. [AGENTS.md](../../AGENTS.md).

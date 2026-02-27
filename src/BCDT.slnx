@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="BCDT.Api/BCDT.Api.csproj" />
+  <Project Path="BCDT.Application/BCDT.Application.csproj" />
+  <Project Path="BCDT.Domain/BCDT.Domain.csproj" />
+  <Project Path="BCDT.Infrastructure/BCDT.Infrastructure.csproj" />
+</Solution>

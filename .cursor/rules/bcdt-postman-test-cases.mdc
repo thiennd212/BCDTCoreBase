@@ -1,0 +1,55 @@
+---
+description: Postman collection và Test cases khi tạo/sửa API hoặc file đề xuất
+globs:
+  - "docs/postman/**"
+  - "**/Controllers/**/*.cs"
+  - "docs/de_xuat_trien_khai/*.md"
+  - "**/*_TEST_CASES.md"
+alwaysApply: false
+---
+
+# Postman collection và Test cases (BCDT)
+
+Áp dụng khi **tạo hoặc sửa API**, hoặc khi làm việc với **file đề xuất / test cases**. Rule **always-verify-after-work** tham chiếu rule này cho bước Postman và test cases.
+
+---
+
+## Test cases (tránh thiếu test case – áp dụng mọi tính năng B1, B2, B3, …)
+
+Khi **triển khai mới hoặc sửa** một tính năng (API, DB, UI), AI **bắt buộc**:
+
+1. **Xác định file đề xuất** tương ứng (vd `docs/de_xuat_trien_khai/B1_JWT.md`, `B4_*.md`).
+2. **Kiểm tra** file đó đã có mục **"Kiểm tra cho AI"** (hoặc **"7.1"**) hoặc file **`*_TEST_CASES.md`** (vd `B1_TEST_CASES.md`) chưa.
+   - **Chưa có:** Tạo mục checklist tối thiểu trong file đề xuất (happy path + ít nhất 1–2 edge case quan trọng): Request, Kỳ vọng, Lệnh chạy (PowerShell/curl). Nếu tính năng có nhiều case thì tạo thêm file `{Mã}_TEST_CASES.md` theo template trong `docs/de_xuat_trien_khai/DE_XUAT_TEST_COVERAGE_TONG_QUAT.md`.
+   - **Đã có:** Khi đổi behavior/API thì **cập nhật** test case (thêm case mới hoặc sửa kỳ vọng).
+3. **Trước khi báo xong:** Chạy **đủ tất cả** các bước trong "Kiểm tra cho AI" (hoặc danh sách case trong `*_TEST_CASES.md` tương ứng); báo **Pass/Fail từng bước/case**. **Không được skip bước/case nào**.
+
+**Áp dụng cho mọi tính năng:** B1, B2, B3, B4, B5, B6, Form, Data, Workflow, … (không chỉ B1).
+
+---
+
+## Postman collection (kiểm thử thủ công)
+
+Khi **tạo hoặc sửa API** (vd thêm endpoint mới, đổi request/response), AI nên:
+
+1. **Tạo hoặc cập nhật** Postman collection trong thư mục `docs/postman/` (file `BCDT-API.postman_collection.json` hoặc theo từng nhóm API).
+2. **Bổ sung request** tương ứng: method, URL (`{{baseUrl}}/api/v1/...`), body (nếu có), header (vd `Authorization: Bearer {{accessToken}}`).
+3. Dùng **biến collection** (vd `baseUrl`, `accessToken`, `refreshToken`) và script "Tests" trong request Login để lưu token vào biến (để request Me/Refresh/Logout dùng sau).
+4. Ghi rõ trong file đề xuất (mục "Kiểm tra cho AI") bước **"Tạo/cập nhật Postman collection"** và đường dẫn file.
+
+Người kiểm thử import collection vào Postman, set `baseUrl` (vd `http://localhost:5080`), chạy Login rồi có thể gọi Me, Refresh, Logout mà không cần copy token tay.
+
+### Postman collection – chuẩn bắt buộc (tránh lỗi import)
+
+Để collection **luôn import được** vào ứng dụng Postman trên máy, AI **bắt buộc** tuân thủ:
+
+| Yêu cầu | Mô tả |
+|--------|--------|
+| **Schema** | `info.schema`: `https://schema.getpostman.com/json/collection/v2.1.0/collection.json`. |
+| **_postman_id** | Trong `info` phải có `_postman_id` (chuỗi, vd UUID hoặc `bcdt-api-1111-2222-3333-444455556666`). Thiếu field này nhiều bản Postman báo lỗi import. |
+| **URL** | Mỗi `request.url`: dùng **chuỗi** (vd `"{{baseUrl}}/api/v1/auth/login"`), không dùng object phức tạp khi có biến. Tránh `host`/`path` chứa `{{baseUrl}}` gây lỗi trên một số phiên bản. |
+| **JSON hợp lệ** | Không trailing comma, string escape đúng (vd `\"` trong raw body). Sau khi ghi file, chạy kiểm tra parse JSON (vd PowerShell `Get-Content ... -Raw \| ConvertFrom-Json`) và chỉ báo Pass khi parse thành công. |
+| **Encoding** | Lưu file UTF-8 (không BOM). Không ký tự lạ trong description/name. |
+| **Tham chiếu** | Dùng `docs/postman/BCDT-API.postman_collection.json` hiện có làm mẫu cấu trúc; khi thêm request mới copy format từ request Login/Me (method, header, body, url). |
+
+**Sau khi tạo/sửa collection:** chạy lệnh xác thực JSON (ví dụ PowerShell: `Get-Content docs/postman/BCDT-API.postman_collection.json -Raw -Encoding UTF8 | ConvertFrom-Json`) và chỉ báo "Postman collection: Pass" khi không có lỗi parse.

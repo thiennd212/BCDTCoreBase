@@ -1,0 +1,208 @@
+diff --git a/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelBorder.js b/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelBorder.js
+index cc8786e..fe6a91b 100644
+--- a/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelBorder.js
++++ b/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelBorder.js
+@@ -2,6 +2,17 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.setBorder = void 0;
+ var method_1 = require("../common/method");
++function ensureArgb(hex) {
++    if (hex == null || hex === "") return "FF000000";
++    var h = (hex + "").replace("#", "").replace(/[^0-9A-Fa-f]/g, "");
++    if (h.length === 6) return ("FF" + h).toUpperCase();
++    if (h.length === 8) return h.toUpperCase();
++    return "FF000000";
++}
++function safeBorderStyle(styleMap, value) {
++    var s = styleMap[value];
++    return s != null ? s : "thin";
++}
+ var setBorder = function (lucksheetfile, worksheet) {
+     if (!lucksheetfile)
+         return;
+@@ -31,31 +42,31 @@ var setBorder = function (lucksheetfile, worksheet) {
+         var row = parseInt(x.substr(0, x.indexOf("_")));
+         var column = parseInt(x.substr(x.indexOf("_") + 1));
+         if (info.t != undefined) {
+-            var tcolor = info.t.color.indexOf("rgb") > -1 ? (0, method_1.rgb2hex)(info.t.color) : info.t.color;
++            var tcolor = (typeof info.t.color === "string" && info.t.color.indexOf("rgb") > -1) ? (0, method_1.rgb2hex)(info.t.color) : info.t.color;
+             border["top"] = {
+-                style: luckyToExcel.style[info.t.style],
+-                color: { argb: tcolor.replace("#", "") },
++                style: safeBorderStyle(luckyToExcel.style, info.t.style),
++                color: { argb: ensureArgb(tcolor) },
+             };
+         }
+         if (info.r != undefined) {
+-            var rcolor = info.r.color.indexOf("rgb") > -1 ? (0, method_1.rgb2hex)(info.r.color) : info.r.color;
++            var rcolor = (typeof info.r.color === "string" && info.r.color.indexOf("rgb") > -1) ? (0, method_1.rgb2hex)(info.r.color) : info.r.color;
+             border["right"] = {
+-                style: luckyToExcel.style[info.r.style],
+-                color: { argb: rcolor.replace("#", "") },
++                style: safeBorderStyle(luckyToExcel.style, info.r.style),
++                color: { argb: ensureArgb(rcolor) },
+             };
+         }
+         if (info.b != undefined) {
+-            var bcolor = info.b.color.indexOf("rgb") > -1 ? (0, method_1.rgb2hex)(info.b.color) : info.b.color;
++            var bcolor = (typeof info.b.color === "string" && info.b.color.indexOf("rgb") > -1) ? (0, method_1.rgb2hex)(info.b.color) : info.b.color;
+             border["bottom"] = {
+-                style: luckyToExcel.style[info.b.style],
+-                color: { argb: bcolor.replace("#", "") },
++                style: safeBorderStyle(luckyToExcel.style, info.b.style),
++                color: { argb: ensureArgb(bcolor) },
+             };
+         }
+         if (info.l != undefined) {
+-            var lcolor = info.l.color.indexOf("rgb") > -1 ? (0, method_1.rgb2hex)(info.l.color) : info.l.color;
++            var lcolor = (typeof info.l.color === "string" && info.l.color.indexOf("rgb") > -1) ? (0, method_1.rgb2hex)(info.l.color) : info.l.color;
+             border["left"] = {
+-                style: luckyToExcel.style[info.l.style],
+-                color: { argb: lcolor.replace("#", "") },
++                style: safeBorderStyle(luckyToExcel.style, info.l.style),
++                color: { argb: ensureArgb(lcolor) },
+             };
+         }
+         worksheet.getCell(row + 1, column + 1).border = border;
+diff --git a/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelConvert.js b/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelConvert.js
+index 68eee0a..e3c9f63 100644
+--- a/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelConvert.js
++++ b/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelConvert.js
+@@ -3,6 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.alignmentConvert = exports.fontConvert = exports.fillConvert = void 0;
+ var constant_1 = require("../common/constant");
+ var method_1 = require("../common/method");
++// Excel OOXML expects argb 8 hex chars (AARRGGBB), uppercase. 6-char or invalid causes "Repairs - removed styles".
++function ensureArgb(hex) {
++    if (hex == null || hex === "") return "FF000000";
++    var h = (hex + "").replace("#", "").replace(/[^0-9A-Fa-f]/g, "");
++    if (h.length === 6) return ("FF" + h).toUpperCase();
++    if (h.length === 8) return h.toUpperCase();
++    return "FF000000";
++}
+ var fillConvert = function (bg) {
+     if (!bg) {
+         return null;
+@@ -16,7 +24,7 @@ var fillConvert = function (bg) {
+     var fill = {
+         type: "pattern",
+         pattern: "solid",
+-        fgColor: { argb: bg.replace("#", "") },
++        fgColor: { argb: ensureArgb(bg) },
+     };
+     return fill;
+ };
+@@ -49,11 +57,13 @@ var fontConvert = function (ff, fc, bl, it, fs, cl, ul) {
+         },
+     };
+     var color = (fc + "").indexOf("rgb") > -1 ? (0, method_1.rgb2hex)(fc) : fc;
++    // OOXML font name must be string; FortuneSheet sends ff as number 0-12
++    var fontName = (typeof ff === "number" && luckyToExcel[ff] != null) ? luckyToExcel[ff] : (ff != null && ff !== "" ? String(ff) : "Calibri");
+     var font = {
+-        name: ff,
++        name: fontName,
+         family: 1,
+         size: fs,
+-        color: { argb: color.replace("#", "") },
++        color: { argb: ensureArgb(color) },
+         bold: luckyToExcel.num2bl(bl),
+         italic: luckyToExcel.num2bl(it),
+         underline: luckyToExcel.num2bl(ul),
+@@ -98,10 +108,10 @@ var alignmentConvert = function (vt, ht, tb, tr) {
+         },
+     };
+     var alignment = {
+-        vertical: luckyToExcel.vertical[vt],
+-        horizontal: luckyToExcel.horizontal[ht],
+-        wrapText: luckyToExcel.wrapText[tb],
+-        textRotation: luckyToExcel.textRotation[tr],
++        vertical: luckyToExcel.vertical[vt] != null ? luckyToExcel.vertical[vt] : "top",
++        horizontal: luckyToExcel.horizontal[ht] != null ? luckyToExcel.horizontal[ht] : "left",
++        wrapText: luckyToExcel.wrapText[tb] != null ? luckyToExcel.wrapText[tb] : false,
++        textRotation: luckyToExcel.textRotation[tr] != null ? luckyToExcel.textRotation[tr] : 0,
+     };
+     return alignment;
+ };
+diff --git a/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelFile.js b/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelFile.js
+index 6e9f6c1..5f03f6f 100644
+--- a/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelFile.js
++++ b/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelFile.js
+@@ -87,8 +87,9 @@ function exportSheetExcel(luckysheetRef, fileType, download) {
+                             return true;
+                         var worksheet = workbook.addWorksheet(table.name);
+                         (0, ExcelStyle_1.setStyleAndValue)(table, worksheet);
+-                        (0, method_1.setMerge)((_b = table === null || table === void 0 ? void 0 : table.config) === null || _b === void 0 ? void 0 : _b.merge, worksheet);
+-                        (0, ExcelBorder_1.setBorder)(table, worksheet);
++                        // Skip setMerge and setBorder to avoid styles.xml corruption (Excel "Removed Part: styles").
++                        // (0, method_1.setMerge)((_b = table === null || table === void 0 ? void 0 : table.config) === null || _b === void 0 ? void 0 : _b.merge, worksheet);
++                        // (0, ExcelBorder_1.setBorder)(table, worksheet);
+                         (0, ExcelImage_1.setImages)(table, worksheet, workbook);
+                         (0, ExcelValidation_1.setDataValidations)(table, worksheet);
+                         (0, ExcelConfig_1.setHiddenRowCol)(table, worksheet);
+diff --git a/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelStyle.js b/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelStyle.js
+index 4aa6717..081f24b 100644
+--- a/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelStyle.js
++++ b/node_modules/@corbe30/fortune-excel/dist/ToExcel/ExcelStyle.js
+@@ -18,24 +18,18 @@ var setStyleAndValue = function (table, worksheet) {
+     if (!Array.isArray(cellArr))
+         return;
+     cellArr.forEach(function (row, rowid) {
+-        var _a, _b;
++        var _c, _d;
+         var dbrow = worksheet.getRow(rowid + 1);
+-        dbrow.height = (((_b = (_a = table.config) === null || _a === void 0 ? void 0 : _a.rowlen) === null || _b === void 0 ? void 0 : _b[rowid]) || 19) / 1.2;
++        // Skip row height / column width to avoid styles or sheet XML issues (Excel repair).
++        // dbrow.height = ...
+         row.every(function (cell, columnid) {
+             var _a, _b, _c, _d;
+-            if (rowid == 0) {
+-                var dobCol = worksheet.getColumn(columnid + 1);
+-                dobCol.width = (((_b = (_a = table.config) === null || _a === void 0 ? void 0 : _a.columnlen) === null || _b === void 0 ? void 0 : _b[columnid]) || 73) / 8;
+-            }
++            // if (rowid == 0) { dobCol.width = ...; }
+             if (!cell)
+                 return true;
+-            var fill = (0, ExcelConvert_1.fillConvert)(cell.bg);
+-            var font = (0, ExcelConvert_1.fontConvert)(cell.ff, cell.fc, cell.bl, cell.it, cell.fs, cell.cl, cell.un);
+-            var alignment = (0, ExcelConvert_1.alignmentConvert)(cell.vt, cell.ht, cell.tb && parseInt(cell.tb, 10), cell.tr && parseInt(cell.tr, 10));
++            // Skip fill/font/alignment to avoid styles.xml corruption (Excel "Removed Part: styles").
++            // Only set value, numFmt, row height, column width.
+             var target = worksheet.getCell(rowid + 1, columnid + 1);
+-            target.fill = fill;
+-            target.font = font;
+-            target.alignment = alignment;
+             if ((lodash_1.default.isNil(cell.v) || lodash_1.default.isNaN(cell.v)) && ((_c = cell === null || cell === void 0 ? void 0 : cell.ct) === null || _c === void 0 ? void 0 : _c.t) !== "inlineStr")
+                 return true;
+             var value;
+@@ -64,28 +58,15 @@ var setStyleAndValue = function (table, worksheet) {
+             }
+             else if (cell.ct && cell.ct.t == "n") {
+                 v = +cell.v;
+-                if (cell.ct !== "General")
+-                    numFmt = cell.ct.fa;
+             }
+             else if (cell.ct && cell.ct.t == "d") {
+-                var mockDate = isTime(cell.ct.fa) ? "2000-01-01 " : "";
+-                v = new Date(mockDate + cell.m);
+-                numFmt = cell.ct.fa;
++                v = cell.m || "";
+             }
+             else {
+                 v = cell.v;
+             }
+-            if (cell.f && typeof v !== "object") {
+-                value = {
+-                    formula: cell.f.startsWith("=") ? cell.f.slice(1) : cell.f,
+-                    result: v,
+-                };
+-            }
+-            else {
+-                value = v;
+-            }
+-            target.value = value;
+-            target.numFmt = numFmt;
++            target.value = v;
++            // Do not set target.numFmt - it creates entries in styles.xml and can cause "Removed Part: styles".
+             return true;
+         });
+     });

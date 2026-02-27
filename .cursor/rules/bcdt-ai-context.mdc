@@ -1,0 +1,19 @@
+---
+description: AI đọc ngữ cảnh dự án trước khi bắt đầu task – AI_CONTEXT.md + TONG_HOP mục 3.2, 3.3–3.5, 3.7
+alwaysApply: false
+---
+
+# BCDT – Ngữ cảnh cho AI
+
+## Khi bắt đầu task
+
+1. **Đọc** [docs/AI_CONTEXT.md](../docs/AI_CONTEXT.md) để nắm: dự án là gì, yêu cầu ở đâu, tiến độ ở đâu, rules bắt buộc, agent/skill theo công việc.
+2. **Tra bảng** [TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md](../docs/TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md) **mục 4.0** để chọn đúng **Tài liệu · Rules · Agent · Skill** cho task tương ứng.
+3. **Dùng block** "Cách giao AI" trong TONG_HOP **mục 4.1** hoặc **mục 8** (nếu có) để đảm bảo đủ Tài liệu, Rules, yêu cầu test.
+4. **Khi làm B12 P2a, P4 mở rộng, P7 hoặc P8** (lọc động, placeholder cột): đọc thêm [KE_HOACH_CAU_HINH_BIEU_MAU_MO_RONG.md](../docs/de_xuat_trien_khai/KE_HOACH_CAU_HINH_BIEU_MAU_MO_RONG.md) và (với P8) [GIAI_PHAP_LOC_DONG_THEO_TRUONG_DU_LIEU.md](../docs/de_xuat_trien_khai/GIAI_PHAP_LOC_DONG_THEO_TRUONG_DU_LIEU.md).
+
+## Lợi ích
+
+- Hiểu đúng đủ mà không cần đọc toàn bộ 01.YEU_CAU_HE_THONG hay toàn bộ TONG_HOP.
+- Giảm token: chỉ đọc AI_CONTEXT (1 trang) + tài liệu đề xuất được trỏ tới.
+- Đồng bộ: luôn theo TONG_HOP 4.0 và block "Cách giao AI" khi triển khai.

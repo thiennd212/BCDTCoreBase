@@ -1,0 +1,60 @@
+---
+description: Mỗi khi xong một công việc (A/B/C...), cập nhật docs/TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md
+globs: docs/TONG_HOP*.md, docs/**/TONG_HOP*.md
+alwaysApply: true
+---
+
+# Cập nhật TONG_HOP khi xong công việc
+
+## Áp dụng khi
+
+- Vừa **hoàn thành** một công việc thuộc danh sách trong `docs/TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md` (A1, A2, B1, B2, B3, B4, B5, B6, …).
+- User xác nhận task xong hoặc AI đã chạy đủ checklist (build, test Pass **đủ tất cả case, không skip**) và báo xong.
+
+## Yêu cầu bắt buộc
+
+**Mỗi khi xong** một công việc, **phải** cập nhật file `docs/TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md` như sau:
+
+### 1. Mục 2.1 – Rà soát nhanh
+
+- Thêm hoặc sửa dòng tương ứng công việc vừa xong: trạng thái **✅ Đã xong**, kèm ghi chú ngắn (vd: "Role trong JWT; checklist 7.1 Pass").
+- Nếu công việc xong là ưu tiên 1: cập nhật dòng "B2, B4–B6" (hoặc tương tự) để tách rõ: công việc vừa xong đã xong; còn lại "Chưa bắt đầu".
+- Cập nhật **Kết luận:** liệt kê đủ A1, A2, B1, B3, B2 (nếu vừa xong), … đã xong; ghi rõ **công việc nên làm tiếp** là gì (ưu tiên tiếp theo).
+
+### 2. Mục 2.2 – Đề xuất công việc tiếp theo (thứ tự)
+
+- Công việc vừa xong: đánh dấu ~~**Bx**~~ ✅ và ghi ngắn (vd: "Role trong JWT; policy theo role; checklist 7.1 Pass").
+
+### 3. Mục 3 – Vị trí trong kế hoạch MVP
+
+- Cập nhật dòng Week 3–4 (hoặc tương ứng): thêm công việc vừa xong vào danh sách ✅ đã xong; cập nhật "còn …" cho đúng.
+
+### 4. Mục 4 – Chi tiết công việc (để duyệt)
+
+- Trong bảng **Nhóm B** (hoặc A): dòng công việc vừa xong đổi trạng thái từ ⏳ thành **✅ Đã xong (YYYY-MM-DD)**.
+- **Nhóm C – Thứ tự ưu tiên:** công việc vừa xong chuyển thành ~~**Bx**~~ ✅; ưu tiên tiếp theo ghi rõ "(ưu tiên tiếp)".
+
+### 5. Mục 5 – Công việc tiếp theo và Agent/Skill dùng
+
+- Dòng công việc vừa xong: đánh dấu ~~Bx: …~~ và ghi **✅ Đã xong** (có thể kèm link file đề xuất, vd [B2_RBAC.md](de_xuat_trien_khai/B2_RBAC.md)).
+
+### 6. Mục 8 – Đề xuất công việc tiếp theo
+
+- Công việc vừa xong: chuyển sang dòng ~~ưu tiên 1~~ **✅ Đã xong** (ghi chú ngắn + link file đề xuất nếu có).
+- **Ưu tiên 1** mới: đặt công việc tiếp theo (B4, B5, …); ghi chú rõ Agent, file đề xuất nếu có.
+- **Cách giao AI:** Nếu ưu tiên 1 thay đổi, **bắt buộc** thêm hoặc sửa block **"Cách giao AI khi làm [Task mới]"** (copy-paste gợi ý cho AI) theo rule **bcdt-next-work-ai-prompt**.
+
+### 7. Version và ngày
+
+- Cập nhật **Ngày cập nhật** (đầu tài liệu) và/hoặc **Version** / **Last Updated** (cuối tài liệu) cho đúng ngày và phiên bản (vd tăng Version 1.4 → 1.5).
+
+## Không được
+
+- Báo xong công việc **mà không** cập nhật `TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md`.
+- Cập nhật thiếu mục (vd chỉ sửa mục 4 mà không sửa 2.1, 2.2, 5, 8).
+- Quên cập nhật **Cách giao AI** (mục 8) khi ưu tiên 1 thay đổi sau khi hoàn thành task.
+
+## Tham chiếu
+
+- Cấu trúc đầy đủ: mở `docs/TONG_HOP_TIEN_DO_VA_CONG_VIEC_TIEP_THEO.md` và rà từ mục 1 đến 8.
+- Gợi ý cho AI (mục 8): rule **bcdt-next-work-ai-prompt**.

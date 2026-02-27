@@ -1,0 +1,10 @@
+﻿1.Login : Pass - token received
+2.POST /submissions : Pass - using existing submissionId=8
+3.GET /submissions : Pass - count=3
+4.GET /submissions/8 : Pass - status=Draft
+5.GET /forms/1/template : Pass - size=6286
+6.POST upload-excel (no file) : Pass - StatusCode=400
+7.POST upload-excel (.txt) : Pass - StatusCode=400
+8.POST upload-excel (xlsx) : Pass - dataRowCount=0, sheetCount=1
+9.GET /submissions/8/presentation : Pass - fileSize=40
+10.POST /submissions (duplicate) : Pass - StatusCode=409

@@ -1,0 +1,202 @@
+---
+description: React + Ant Design + DevExtreme patterns for BCDT frontend
+globs: **/*.tsx,**/*.ts
+alwaysApply: false
+---
+
+# React Frontend
+
+## State Management
+- Server state: React Query (`useQuery`, `useMutation`)
+- Client state: Redux Toolkit (complex UI only)
+- Form state: React Hook Form + Zod validation
+
+## DevExtreme Components
+- DataGrid: For tables with sorting, filtering, paging
+- Spreadsheet: For Excel editing (DevExtreme Spreadsheet)
+- Charts: For dashboard visualizations
+
+## Patterns
+```tsx
+// ✅ Data fetching hook
+const useForm = (id: number) => useQuery({
+  queryKey: ['form', id],
+  queryFn: () => formApi.getById(id),
+});
+
+// ✅ Component structure
+export const FormEditor: React.FC<{ formId: number }> = ({ formId }) => {
+  const { data, isLoading, error } = useForm(formId);
+  
+  if (isLoading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+  
+  return <SpreadsheetEditor data={data} />;
+};
+```
+
+## API Calls
+```tsx
+// ✅ Centralized API
+const formApi = {
+  getById: (id: number) => axios.get<FormDto>(`/api/v1/forms/${id}`),
+  save: (data: FormRequest) => axios.post('/api/v1/forms', data),
+};
+```
+
+## Yêu cầu FE – Modal form (checklist khi tạo/sửa form trong Modal)
+
+Khi tạo hoặc sửa form hiển thị trong Ant Design Modal, **bắt buộc** tuân thủ:
+
+| # | Yêu cầu | Cách làm |
+|---|---------|----------|
+| 1 | **Kích thước modal** theo số trường | Dùng `MODAL_FORM.SMALL | MEDIUM | LARGE` từ `constants/modalSizes.ts`; không hardcode width. ~3–5 trường → SMALL; ~6–8 → MEDIUM; ~9+ → LARGE. |
+| 2 | **Chỉ một scroll – bên ngoài** | Body modal không scroll. `styles={{ body: { overflow: 'visible', maxHeight: 'none' } }}`. Chỉ dùng scroll chính của trang. |
+| 3 | **Khi mở modal: scroll trang + modal gần trên** | Gọi `useScrollPageTopWhenModalOpen(modalOpen)`; Modal thêm `style={{ top: MODAL_FORM_TOP_OFFSET }}` (từ `modalSizes.ts`) để hiển thị nhiều trường nhất. |
+| 4 | **Focus trường đầu tiên** | Dùng `useFocusFirstInModal(modalOpen, formContainerRef)`; bọc nội dung form trong `<div ref={formContainerRef}>`. |
+| 5 | **Bố cục form cân đối** | Form nhiều trường: chia nhóm (tiêu đề + Divider), Row/Col 2 cột (`gutter={16}`, `Col xs={24} sm={12}`) cho trường ngắn; trường dài full width. |
+| 6 | **Trường trạng thái (boolean)** | Dùng **Checkbox** (vd. "Hoạt động" Có/Không), không dùng Select/combobox full width. `Form.Item` với `valuePropName="checked"`. |
+| 7 | **Trường thứ tự hiển thị (displayOrder/sortOrder)** | Khi mở form **tạo mới**: tính số đề xuất tiếp theo = `max(0, ...items.map(i => i.displayOrder ?? 0)) + 1` (danh sách từ API/query); set vào form qua `setFieldsValue`. Không mặc định 0 nếu đã có dữ liệu. |
+| 8 | **Không dùng API deprecated** | Drawer/Modal: `styles.body`, `size`; **Modal:** dùng `destroyOnHidden` thay `destroyOnClose` (deprecated). Kiểm tra Console **không** cảnh báo. |
+| 9 | **useForm luôn gắn Form – tránh "not connected"** | **Không** gọi `form.resetFields()` (hoặc bất kỳ form method nào) trong `useEffect` khi `!modalOpen` – lúc đóng modal Form có thể không còn trong DOM → instance `useForm` bị "disconnected" → Console cảnh báo. Chỉ reset state: `if (!modalOpen) setEditingId(null)`. Khi mở lại dùng `setFieldsValue(...)` trong `openCreate` / `openEdit` để điền form. Modal dùng `destroyOnHidden={false}`. |
+
+**File/hook tham chiếu:** `constants/modalSizes.ts`, `hooks/useFocusFirstInModal.ts`, `hooks/useScrollPageTopWhenModalOpen.ts`.
+
+---
+
+## Ngôn ngữ hiển thị – Tiếng Việt (bắt buộc)
+
+**Tất cả** text và message hiển thị cho người dùng trên FE **bắt buộc** dùng **tiếng Việt**.
+
+| Loại | Ví dụ | Cách làm |
+|------|--------|----------|
+| **Ant Design locale** | Modal/Popconfirm/Table mặc định | `ConfigProvider locale={viVN}` với `import viVN from 'antd/locale/vi_VN'` trong `App.tsx`. |
+| **Modal / Popconfirm** | Nút Hủy, Xóa, Tạo, Cập nhật | Luôn set `okText`, `cancelText` (vd. `cancelText="Hủy"`, `okText="Tạo"`). |
+| **Label, placeholder** | Form, Input, Select | Dùng tiếng Việt: "Tên đăng nhập", "Mật khẩu", "Chọn vai trò", "Hủy", v.v. |
+| **message.success / error** | Thông báo sau thao tác | Dùng tiếng Việt: "Tạo đơn vị thành công", "Đăng nhập thất bại", v.v. |
+| **Lỗi throw / hiển thị** | Error từ API hiển thị cho user | Message trong `throw new Error(...)` hoặc `message.error(...)` dùng tiếng Việt khi hiển thị cho user. |
+| **Drawer / title** | Tiêu đề panel, menu | Vd. "Danh mục" thay vì "Menu" nếu cần thống nhất. |
+
+**Kiểm tra trước khi bàn giao:** Không còn nút/chữ tiếng Anh (Cancel, OK, Username, Password, …) trên giao diện; toàn bộ label, placeholder, message, title đều tiếng Việt.
+
+---
+
+## DevTools – Console và Issues (bắt buộc)
+
+Khi **tạo hoặc sửa** bất kỳ phần FE nào, **luôn** kiểm tra DevTools trước khi báo xong:
+
+| Bước | Yêu cầu |
+|------|--------|
+| Mở DevTools | F12 (hoặc Cmd+Option+I) → tab **Console** và (nếu có) tab **Issues**. |
+| Console | **Không được còn error** (Uncaught Error, Too many re-renders, ReferenceError, …). **Không được còn warning** (deprecated API, useForm disconnected, …). |
+| Issues | Nếu trình duyệt hiển thị Issues, xử lý hoặc ghi rõ issue còn lại. |
+| Báo cáo | AI khi hoàn thành task FE **bắt buộc** ghi: *"DevTools Console: không error/warning"* hoặc liệt kê lỗi đã sửa. |
+
+Tránh: setState trong useMemo (gây "Too many re-renders"); gọi hàm chưa khai báo (ReferenceError); dùng API deprecated mà Console cảnh báo.
+
+---
+
+## Dữ liệu phân cấp (Hierarchical – ParentId / TreePath / Level)
+
+Khi entity có quan hệ cha–con (Organization, Menu, ReferenceEntity, …) **bắt buộc** tuân theo **rule bcdt-hierarchical-data** và tài liệu [HIERARCHICAL_DATA_BASE_AND_RULE.md](docs/de_xuat_trien_khai/HIERARCHICAL_DATA_BASE_AND_RULE.md):
+
+- **List dạng cây:** Dùng **Table** với `dataSource={treeData}` (treeData = useMemo(() => buildTree(data), [data]) từ `utils/treeUtils.ts`), **không** hiển thị list phẳng. Tắt phân trang hoặc chỉ showTotal; defaultExpandRowKeys cấp 1.
+- **Form trường "cha":** Dùng **TreeSelect** (Ant Design), không Select phẳng. Khi **sửa** dùng `treeExcludeSelfAndDescendants(tree, editingId)` để không chọn được bản thân và con.
+- **Util:** Dùng `buildTree<T>`, `treeExcludeSelfAndDescendants<T>` từ `src/utils/treeUtils.ts` (generic, O(n)).
+
+**Skill:** bcdt-hierarchical-tree. **Agent:** bcdt-hierarchical-data.
+
+---
+
+## Bảng danh sách (Table / DataGrid)
+
+Khi tạo hoặc sửa bảng danh sách (Ant Design Table, DevExtreme DataGrid), **bắt buộc** tuân thủ:
+
+| Yêu cầu | Cách làm |
+|---------|----------|
+| **Không cột ID mặc định** | Danh sách mặc định **không** hiển thị cột ID; chỉ thêm khi yêu cầu nghiệp vụ (vd. màn debug, tra cứu theo ID). |
+| **Cột Thao tác: chỉ icon, không text** | Nút Sửa/Xóa (hoặc tương đương) dùng **chỉ icon** (vd. `EditOutlined`, `DeleteOutlined`), **không** kèm chữ "Sửa"/"Xóa". Bọc trong `<Tooltip title="Sửa">` / `<Tooltip title="Xóa">` để hover hiển thị mô tả. |
+| **Cột trạng thái (boolean): icon hoặc label phân biệt màu** | Trường Hoạt động, IsActive, v.v. **không** hiển thị plain text "Có"/"Không". Dùng **Tag** với màu (vd. `color="success"` cho Có, `color="default"` cho Không) hoặc icon + màu (vd. CheckCircleOutlined xanh, CloseCircleOutlined xám/đỏ). |
+| **Viền và phân cách cột** | Table **bắt buộc** dùng `bordered` để có viền ngoài bảng và đường kẻ dọc giữa mọi cột (header và ô đều có phân cách rõ, không thiếu đường giữa các cột như Cấp – Hoạt động). |
+| **Header một dòng** | Mỗi cột thêm `onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } })` để tiêu đề không xuống dòng (vd. "Hoạt động" không tách hai dòng). |
+| **Phân trang – text tổng** | `showTotal: (t) => \`Tổng ${t} bản ghi\`` (dùng "bản ghi", không dùng "dòng"). |
+
+**Ví dụ cột Thao tác:** `<Tooltip title="Sửa"><Button type="link" size="small" icon={<EditOutlined />} onClick={...} /></Tooltip>` (không có children text).
+
+**Ví dụ cột Hoạt động:** `<Tag color={v ? 'success' : 'default'}>{v ? 'Có' : 'Không'}</Tag>`.
+
+**Header và cột cân đối:** Cột ngắn (Mã, Cấp, Loại, Hoạt động, Thao tác) set `width` cố định hợp lý; cột dài (Tên, Email) dùng `minWidth` hoặc không set width để co giãn, thêm `ellipsis: true` cho text dài. Cột số/Cấp: `align: 'center'`; cột Hoạt động (Tag): `align: 'center'`; cột Thao tác: `align: 'right'` và nội dung bọc `<Space style={{ justifyContent: 'flex-end' }}>` để header và nội dung cùng căn phải.
+
+---
+
+## Kích thước Modal form (cân đối theo số trường)
+
+**Bắt buộc** dùng constant `src/constants/modalSizes.ts` – **không hardcode** số pixel (vd. 560, 720).
+
+| Size | Width | Khi nào dùng |
+|------|--------|--------------|
+| **MODAL_FORM.SMALL** | 440px | Form ~3–5 trường (đơn giản). |
+| **MODAL_FORM.MEDIUM** | 600px | Form ~6–8 trường (vd. user: tài khoản + thông tin + phân quyền). |
+| **MODAL_FORM.LARGE** | 720px | Form ~9+ trường hoặc nhiều ô rộng (vd. đơn vị: cơ bản + liên hệ + khác). |
+
+- Khi **tạo form mới**: đếm/ước lượng số trường → chọn SMALL / MEDIUM / LARGE tương ứng. Nếu form không nằm trong 3 mức (vd. rất nhiều trường) thì bổ sung constant mới vào `modalSizes.ts` rồi dùng.
+- Ví dụ: `<Modal width={MODAL_FORM.LARGE}>`. Import từ `../constants/modalSizes`.
+- **Chỉ một scroll – bên ngoài:** Không tạo scroll riêng trong body modal. Dùng `styles={{ body: { overflow: 'visible', maxHeight: 'none' } }}`; chỉ scroll chính của trang khi nội dung dài.
+- **Scroll trang + modal gần cạnh trên:** Khi mở modal, tự động scroll trang lên đầu (`useScrollPageTopWhenModalOpen(modalOpen)`) và đặt modal gần cạnh trên (`style={{ top: MODAL_FORM_TOP_OFFSET }}` từ `modalSizes.ts`) để hiển thị được nhiều trường nhất.
+- **Focus trường đầu tiên:** Dùng `useFocusFirstInModal(modalOpen, formContainerRef)`; bọc form trong `<div ref={formContainerRef}>`.
+
+## Form trong Modal – bố cục cân đối, hợp lý
+
+- **Nhiều trường (~6+):** Chia nhóm bằng tiêu đề nhóm (`Typography.Text type="secondary" strong`) + `Divider`; dùng `Row`/`Col` với `gutter={16}`, trường ngắn (vd. Mã/Tên, Phone/Email) đặt 2 cột: `Col xs={24} sm={12}`; trường dài (Địa chỉ, Multi Select) full width. Modal dùng `MODAL_FORM.MEDIUM` hoặc `LARGE` tùy số trường.
+- **Ít trường (~3–5):** Có thể 1 cột; Modal dùng `MODAL_FORM.SMALL`.
+- **Nhất quán:** Label rõ ràng, placeholder hợp lý, `layout="vertical"` cho Form. Modal: dùng `destroyOnHidden` (không dùng `destroyOnClose` deprecated), `destroyOnHidden={false}`. **Không** gọi `form.resetFields()` trong `useEffect` khi `!modalOpen` (Form có thể unmount → cảnh báo "useForm is not connected"); chỉ `setEditingId(null)`. Khi mở modal dùng `setFieldsValue` trong `openCreate`/`openEdit`.
+- **Trường trạng thái (boolean):** Dùng **Checkbox** (vd. "Hoạt động" Có/Không), không dùng Select/combobox full width. `Form.Item` với `valuePropName="checked"`.
+- **Trường thứ tự hiển thị:** Khi mở form tạo mới, đề xuất số tiếp theo = max(displayOrder của danh sách hiện có) + 1; set qua `setFieldsValue` trong handler mở modal (vd. `openCreate`).
+
+## Trước khi bàn giao – Console không cảnh báo (bắt buộc)
+
+**Bắt buộc** trước khi bàn giao hoặc báo xong FE:
+
+1. Mở DevTools → tab **Console** trên trang có sửa (vd. `/organizations`, `/users`).
+2. **Không được còn** cảnh báo (warning) sau:
+   - Deprecated: vd. `[antd: Modal] destroyOnClose is deprecated. Please use destroyOnHidden instead.` → sửa ngay (dùng `destroyOnHidden`).
+   - Form: `Instance created by useForm is not connected to any Form element` → **nguyên nhân thường gặp:** gọi `form.resetFields()` trong `useEffect` khi `!modalOpen` (khi modal đóng Form có thể unmount). **Cách xử lý:** trong `useEffect` khi `!modalOpen` chỉ gọi `setEditingId(null)`, **không** gọi `form.resetFields()`. Khi mở lại dùng `setFieldsValue` trong `openCreate`/`openEdit`. Modal dùng `destroyOnHidden={false}`.
+3. Nếu còn bất kỳ warning nào liên quan code vừa sửa → xử lý xong rồi mới báo hoàn thành.
+
+**Tóm tắt:** Console sạch warning (deprecated, useForm not connected) = điều kiện bắt buộc trước khi bàn giao.
+
+## Tự test UI khi FE đã ghép BE
+
+Khi kiểm tra hoặc bàn giao **frontend đã kết nối backend**, AI **bắt buộc** tự test UI và báo Pass/Fail:
+
+- **Ưu tiên:** Chạy script E2E của dự án (vd. `npm run test:e2e` trong thư mục frontend) khi backend đang chạy; đọc output và báo **Pass** hoặc **Fail** từng test.
+- **Thay thế:** Theo tài liệu hướng dẫn tự test UI của dự án trong `docs/` (từng bước); hoặc dùng MCP browser (navigate, fill form, click, snapshot) theo checklist kiểm tra UI tương ứng, báo Pass/Fail từng bước.
+
+## Tránh API deprecated (Ant Design và thư viện FE khác)
+
+- **Không dùng prop đã deprecated** – Console cảnh báo sẽ được coi là lỗi cần sửa.
+- **Ant Design:** Ưu tiên API mới:
+  - `Drawer` / `Modal`: dùng `styles.body` thay cho `bodyStyle`; dùng `size` thay cho `width` khi component hỗ trợ.
+  - Khi thêm component mới: tra [Ant Design Components](https://ant.design/components/overview) hoặc type definition để dùng đúng prop hiện tại.
+- **Quy tắc:** Trước khi dùng component từ antd/UI lib, kiểm tra TypeScript types hoặc docs; nếu có cảnh báo deprecated trong console thì đổi sang API được khuyến nghị (ví dụ `styles.*` thay cho `*Style`).
+
+## Don't
+- Don't use class components
+- Don't fetch in useEffect (use React Query)
+- Don't mutate state directly
+- Don't use `any` type
+- Don't use deprecated props (e.g. Modal `destroyOnClose` → use `destroyOnHidden`; Drawer `bodyStyle`, `width` → use `styles.body`, `size`)
+- Don't hardcode Modal `width` (vd. 560, 720) – luôn dùng `MODAL_FORM.SMALL | MEDIUM | LARGE` từ `constants/modalSizes.ts`
+- Don't để form nhiều trường dồn 1 cột không nhóm – phải chia nhóm và 2 cột khi hợp lý
+- Don't tạo scroll riêng trong body modal – chỉ scroll chính trang; body modal dùng `overflow: 'visible', maxHeight: 'none'`
+- Don't quên khi mở modal: scroll trang lên đầu + `style={{ top: MODAL_FORM_TOP_OFFSET }}` + focus trường đầu tiên (hooks có sẵn)
+- Don't dùng Select/combobox full width cho trường boolean (Hoạt động, IsActive, …) – dùng **Checkbox**, `Form.Item` với `valuePropName="checked"`
+- Don't mặc định trường "Thứ tự hiển thị" (displayOrder/sortOrder) = 0 khi tạo mới nếu đã có danh sách – tính số đề xuất tiếp theo (max + 1) và set vào form khi mở modal
+- Don't bàn giao khi Console còn warning: deprecated (vd. `destroyOnClose`), "useForm is not connected to any Form" – **bắt buộc xử lý trước khi bàn giao**. Don't gọi `form.resetFields()` trong `useEffect` khi `!modalOpen` – gây cảnh báo "not connected"
+- Don't dùng text/message tiếng Anh cho người dùng – **tất cả** label, placeholder, nút (Cancel/OK), message.success/error, title đều **tiếng Việt**; dùng `ConfigProvider locale={viVN}` và set rõ `okText`/`cancelText` cho Modal/Popconfirm
+- Don't hiển thị cột ID trong bảng danh sách mặc định – chỉ thêm khi yêu cầu nghiệp vụ
+- Don't dùng nút có cả icon + text cho cột Thao tác – chỉ **icon**, dùng Tooltip cho mô tả khi hover
+- Don't hiển thị trường trạng thái (Hoạt động, IsActive) dạng plain text – dùng **Tag** màu (success/default) hoặc icon phân biệt màu
+- Don't để header cột table xuống hai dòng – dùng `onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } })` cho từng cột
+- Don't dùng "Tổng x dòng" trong phân trang – dùng **"Tổng x bản ghi"** (showTotal trả về chuỗi có "bản ghi")
+- Don't bỏ `bordered` trên Table – bắt buộc có viền ngoài và phân cách dọc giữa các cột (header và ô)

@@ -1,0 +1,104 @@
+---
+description: Excel/Spreadsheet patterns (template, upload, hybrid storage)
+globs: 
+  - **/Excel/**/*.cs
+  - **/Spreadsheet/**/*.tsx
+  - **/Services/*Excel*.cs
+  - **/Services/*Spreadsheet*.cs
+  - **/Services/*Template*.cs
+alwaysApply: false
+---
+
+# BCDT Excel & Template
+
+## API đã có
+- **GET /api/v1/forms/{id}/template** – trả file .xlsx (ClosedXML, IFormTemplateService). Query: `fillBinding=true` điền giá trị từ **IDataBindingResolver** (BindingType: Static, Database, Reference, Organization, System, Formula, API); optional `organizationId`, `reportingPeriodId` → ResolveContext.
+- **POST /api/v1/submissions/{id}/upload-excel** – multipart/form-data, file .xlsx/.xls; ISubmissionExcelService đọc theo FormColumnMapping, ghi ReportDataRow + ReportPresentation.WorkbookJson.
+- **GET /api/v1/submissions/{id}/workbook-data** – trả WorkbookFromSubmissionDto (sheets, columnsBySheet, sheetIdsOrder) để FE build Fortune-sheet khi chưa có presentation hoặc load từ DB.
+- **GET /api/v1/submissions/{id}/presentation** – trả presentation (200 + data null khi chưa có). **PUT** – lưu WorkbookJson (Fortune format) sau khi chỉnh sửa trên màn nhập liệu.
+- **POST /api/v1/submissions/{id}/sync-from-presentation** – đồng bộ từ sheet (Fortune) → ReportDataRow (SyncFromPresentationService); bỏ qua `headerRowCount` (1 hoặc 2) hàng header khi đọc dữ liệu.
+
+## Màn nhập liệu Excel (đã triển khai)
+- Trang: `/submissions/{id}/entry` (SubmissionDataEntryPage). Component: **Fortune-sheet** (@corbe30/fortune-excel), adapter `fortuneSheetAdapter.ts` (buildHeaderRows, simpleToFortuneSheets, dataVerification/rowReadOnly chỉ cho dòng dữ liệu).
+- Header 1–2 tầng: **FormColumn.ColumnGroupName**; merge theo nhóm (config.merge), hàng header readOnly.
+- Khi chưa có presentation: gọi GET workbook-data → `simpleToFortuneSheets(workbookFromSubmission.sheets, columnsBySheet, sheetIdsOrder)`.
+- Export .xlsx: **SheetJS** (xlsx) trong `exportSheetJsXlsx.ts`; nút "Tải Excel (.xlsx)" trên trang. Chi tiết style/merge: [docs/FORTUNE_EXCEL_STYLES_FIX.md](../../docs/FORTUNE_EXCEL_STYLES_FIX.md).
+
+## Seed dữ liệu test
+- Script: `docs/script_core/sql/v2/` — seed_test_excel_entry.sql, seed_test_excel_full_form.sql, seed_more_submissions_excel_entry.sql.
+- Batch MCP (một batch, không GO): seed_mcp_1_test_excel_entry.sql, seed_mcp_2_test_excel_full.sql, seed_mcp_3_more_submissions.sql. Hướng dẫn: [SEED_VIA_MCP.md](../../docs/script_core/sql/v2/SEED_VIA_MCP.md), [README_SEED_TEST.md](../../docs/script_core/sql/v2/README_SEED_TEST.md).
+- PowerShell: `Ensure-TestData.ps1` trong thư mục sql/v2.
+
+## Hybrid 2-Layer (đã triển khai)
+- Layer 1: ReportPresentation.WorkbookJson (JSON workbook, Fortune format khi nhập trên web).
+- Layer 2: ReportDataRow (relational, NumericValue1, TextValue1, … theo FormColumnMapping).
+
+---
+
+# DevExpress Spreadsheet (tùy chọn)
+
+**NuGet:** Package DevExpress .NET phải dùng feed công ty. Xem rule **bcdt-devexpress-nuget** và `nuget.config` (feed: https://devexpress.aequitas.dev/nuget).
+
+## Backend - Generate Workbook (C#)
+```csharp
+using DevExpress.Spreadsheet;
+
+// ✅ Create workbook
+using var workbook = new Workbook();
+var sheet = workbook.Worksheets[0];
+
+// ✅ Set values and formatting
+sheet.Cells["A1"].Value = "Header";
+sheet.Cells["A1"].Font.Bold = true;
+sheet.Cells["A1"].Fill.BackgroundColor = Color.LightGray;
+
+// ✅ Lock/unlock cells
+sheet.Protect("", SheetProtectionOptions.Default);
+sheet.Range["B2:B100"].Protection.Locked = false; // Editable cells
+```
+
+## Backend - Save to Hybrid Storage
+```csharp
+// 1. Save JSON (Layer 1 - full state)
+submission.Presentation.WorkbookJson = workbook.SaveToJson();
+
+// 2. Extract to relational (Layer 2 - for queries)
+foreach (var row in editableRows)
+{
+    var dataRow = new ReportDataRow { ... };
+    // Map cells to NumericValue1, TextValue1, etc.
+}
+
+// 3. Calculate summary (Layer 2.5)
+submission.Summary.TotalValue1 = dataRows.Sum(r => r.NumericValue1);
+```
+
+## Frontend - Spreadsheet Component (React)
+```tsx
+import { Spreadsheet } from 'devextreme-react/spreadsheet';
+
+const ExcelEditor: React.FC<{ workbookJson: string }> = ({ workbookJson }) => {
+  const spreadsheetRef = useRef<Spreadsheet>(null);
+  
+  const handleSave = async () => {
+    const json = spreadsheetRef.current?.instance.getDocument();
+    await submissionApi.save({ workbookJson: json });
+  };
+
+  return (
+    <Spreadsheet
+      ref={spreadsheetRef}
+      height={600}
+      documentFormat="json"
+      documentSource={workbookJson}
+    />
+  );
+};
+```
+
+## Data Binding Flow
+1. Load FormDefinition with DataBindings
+2. Resolve each binding (DB, API, Reference, Formula)
+3. Populate cells with resolved values
+4. Lock non-editable cells
+5. Return JSON to frontend

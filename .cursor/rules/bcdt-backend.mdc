@@ -1,0 +1,58 @@
+---
+description: .NET 8 backend patterns for BCDT
+globs: **/*.cs
+alwaysApply: false
+---
+
+# .NET 8 Backend
+
+## EF Core 8 (CRUD, navigation)
+```csharp
+// ✅ Async with includes
+var form = await _context.FormDefinitions
+    .Include(f => f.Sheets).ThenInclude(s => s.Columns)
+    .FirstOrDefaultAsync(f => f.Id == id);
+
+// ✅ Concurrency check
+[ConcurrencyCheck]
+public int Version { get; set; }
+```
+
+## Dapper (queries, bulk, performance)
+```csharp
+// ✅ Complex query
+var stats = await _connection.QueryAsync<DashboardDto>(
+    "SELECT OrganizationId, COUNT(*) FROM BCDT_ReportSubmission GROUP BY OrganizationId");
+
+// ✅ Bulk insert - use SqlBulkCopy for 100+ rows
+```
+
+## Service Pattern
+```csharp
+// ✅ Return Result<T>, don't throw for business logic
+public async Task<Result<FormDto>> GetAsync(int id)
+{
+    var form = await _repo.GetByIdAsync(id);
+    return form is null 
+        ? Result.NotFound<FormDto>($"Form {id} not found")
+        : Result.Success(_mapper.Map<FormDto>(form));
+}
+```
+
+## Validation
+- Use FluentValidation for request DTOs
+- Validate in Application layer, not Controller
+
+## DisplayOrder / SortOrder (trường thứ tự hiển thị)
+- Entity có cột `DisplayOrder` / `SortOrder`: khi **Create**, nếu request không gửi giá trị (null) hoặc gửi 0 và danh sách hiện có đã có bản ghi, **tự gán số tiếp theo** = `max(DisplayOrder trong cùng scope) + 1` trước khi lưu (trong Service/Application layer).
+- Cùng scope: cùng bảng hoặc cùng nhóm (vd. cùng ParentId, cùng FormId). Dùng query `SELECT MAX(DisplayOrder) FROM ...` hoặc EF: `await _repo.GetMaxDisplayOrderAsync(scope)` rồi gán `entity.DisplayOrder = max + 1`.
+- Nếu client gửi giá trị cụ thể (vd. 5), vẫn chấp nhận; chỉ auto-fill khi thiếu hoặc 0 để UX nhất quán với FE (FE đề xuất max+1, BE hỗ trợ khi FE chưa gửi).
+
+## Build backend
+- **Trước khi chạy `dotnet build`:** Kiểm tra và **hủy process BCDT.Api** nếu đang chạy để tránh lỗi file/DLL bị lock. PowerShell: `Get-Process -Name "BCDT.Api" -ErrorAction SilentlyContinue | Stop-Process -Force`. Chi tiết: [RUNBOOK](../docs/RUNBOOK.md) mục 6.1.
+
+## Don't
+- Don't use `_context.SaveChanges()` sync version
+- Don't catch generic Exception (catch specific)
+- Don't return Task without async/await when doing I/O
+- Don't bỏ qua DisplayOrder/SortOrder khi Create: nếu request không gửi hoặc = 0 mà đã có dữ liệu cùng scope thì gán số tiếp theo (max + 1), không mặc định 0

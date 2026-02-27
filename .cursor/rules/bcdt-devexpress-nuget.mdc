@@ -1,0 +1,42 @@
+---
+description: DevExpress NuGet phải dùng feed công ty (devexpress.aequitas.dev) để tránh lỗi license
+globs:
+  - nuget.config
+  - "**/*.csproj"
+alwaysApply: false
+---
+
+# DevExpress – Feed NuGet công ty
+
+## Bắt buộc
+
+- **Mọi package DevExpress (.NET)** phải được lấy từ **feed NuGet của công ty**, không dùng nuget.org cho DevExpress (tránh báo lỗi license).
+- **Feed:** `https://devexpress.aequitas.dev/nuget`
+- **Key trong nuget.config:** `DevExpress-Aequitas`
+
+## Cấu hình (đã có trong repo)
+
+File **`nuget.config`** ở thư mục gốc solution đã cấu hình:
+
+1. **packageSources:** nuget.org + DevExpress-Aequitas (`https://devexpress.aequitas.dev/nuget`).
+2. **packageSourceMapping:** Gói `DevExpress.*` và `DX*` chỉ lấy từ `DevExpress-Aequitas`; các gói khác từ nuget.org.
+
+Khi thêm hoặc sửa reference DevExpress trong `.csproj`, **không** xóa hoặc ghi đè cấu hình này. Nếu chưa có `nuget.config` ở thư mục gốc, tạo với nội dung tương tự (packageSources + packageSourceMapping cho DevExpress).
+
+## Thêm package DevExpress
+
+```bash
+# Restore sẽ dùng feed từ nuget.config
+dotnet add package DevExpress.<TênGói>
+dotnet restore
+```
+
+Không thêm source nuget.org riêng cho DevExpress; không đổi packageSourceMapping để đưa DevExpress.* về nuget.org.
+
+## Nếu feed yêu cầu xác thực
+
+Nếu `https://devexpress.aequitas.dev/nuget` yêu cầu API key hoặc user/password, cấu hình credential (vd `dotnet nuget add source` với `--username`/`--password`, hoặc credential provider). Chi tiết xem [RUNBOOK.md](docs/RUNBOOK.md) mục 5.
+
+## Frontend (npm)
+
+Frontend dùng **npm** (devextreme, devextreme-react) từ npmjs.com. Rule này chỉ áp dụng cho **NuGet / .NET**. Nếu công ty có npm registry riêng cho DevExtreme, cấu hình riêng (vd `.npmrc`).

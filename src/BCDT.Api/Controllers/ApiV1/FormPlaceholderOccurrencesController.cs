@@ -1,0 +1,87 @@
+using System.Security.Claims;
+using BCDT.Api.Common;
+using BCDT.Application.DTOs.Form;
+using BCDT.Application.Services.Form;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace BCDT.Api.Controllers.ApiV1;
+
+[ApiController]
+[Route("api/v1/forms/{formId:int}/sheets/{sheetId:int}/placeholder-occurrences")]
+[Authorize]
+[Produces("application/json")]
+public class FormPlaceholderOccurrencesController : ControllerBase
+{
+    private readonly IFormPlaceholderOccurrenceService _service;
+
+    public FormPlaceholderOccurrencesController(IFormPlaceholderOccurrenceService service) => _service = service;
+
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiSuccessResponse<List<FormPlaceholderOccurrenceDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetList(int formId, int sheetId, CancellationToken cancellationToken)
+    {
+        var result = await _service.GetBySheetIdAsync(formId, sheetId, cancellationToken);
+        if (!result.IsSuccess)
+            return result.Code == "NOT_FOUND" ? NotFound(new ApiErrorResponse(result.Code!, result.Message!)) : BadRequest(new ApiErrorResponse(result.Code!, result.Message!));
+        return Ok(new ApiSuccessResponse<List<FormPlaceholderOccurrenceDto>>(result.Data!));
+    }
+
+    [HttpGet("{occurrenceId:int}")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<FormPlaceholderOccurrenceDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Get(int formId, int sheetId, int occurrenceId, CancellationToken cancellationToken)
+    {
+        var result = await _service.GetByIdAsync(formId, sheetId, occurrenceId, cancellationToken);
+        if (!result.IsSuccess)
+            return BadRequest(new ApiErrorResponse(result.Code!, result.Message!));
+        if (result.Data == null)
+            return NotFound(new ApiErrorResponse("NOT_FOUND", "Vị trí placeholder không tồn tại."));
+        return Ok(new ApiSuccessResponse<FormPlaceholderOccurrenceDto>(result.Data));
+    }
+
+    [Authorize(Policy = "FormStructureAdmin")]
+    [HttpPost]
+    [ProducesResponseType(typeof(ApiSuccessResponse<FormPlaceholderOccurrenceDto>), StatusCodes.Status201Created)]
+    public async Task<IActionResult> Create(int formId, int sheetId, [FromBody] CreateFormPlaceholderOccurrenceRequest request, CancellationToken cancellationToken)
+    {
+        var userId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : -1;
+        var result = await _service.CreateAsync(formId, sheetId, request, userId, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            if (result.Code == "NOT_FOUND") return NotFound(new ApiErrorResponse(result.Code!, result.Message!));
+            return BadRequest(new ApiErrorResponse(result.Code!, result.Message!));
+        }
+        return CreatedAtAction(nameof(Get), new { formId, sheetId, occurrenceId = result.Data!.Id }, new ApiSuccessResponse<FormPlaceholderOccurrenceDto>(result.Data!));
+    }
+
+    [Authorize(Policy = "FormStructureAdmin")]
+    [HttpPut("{occurrenceId:int}")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<FormPlaceholderOccurrenceDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(int formId, int sheetId, int occurrenceId, [FromBody] UpdateFormPlaceholderOccurrenceRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _service.UpdateAsync(formId, sheetId, occurrenceId, request, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            if (result.Code == "NOT_FOUND") return NotFound(new ApiErrorResponse(result.Code!, result.Message!));
+            return BadRequest(new ApiErrorResponse(result.Code!, result.Message!));
+        }
+        return Ok(new ApiSuccessResponse<FormPlaceholderOccurrenceDto>(result.Data!));
+    }
+
+    [Authorize(Policy = "FormStructureAdmin")]
+    [HttpDelete("{occurrenceId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(int formId, int sheetId, int occurrenceId, CancellationToken cancellationToken)
+    {
+        var result = await _service.DeleteAsync(formId, sheetId, occurrenceId, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            if (result.Code == "NOT_FOUND") return NotFound(new ApiErrorResponse(result.Code!, result.Message!));
+            return BadRequest(new ApiErrorResponse(result.Code!, result.Message!));
+        }
+        return Ok(new ApiSuccessResponse<object>(new { }));
+    }
+}

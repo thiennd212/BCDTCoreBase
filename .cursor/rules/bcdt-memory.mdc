@@ -1,0 +1,13 @@
+---
+description: Ghi nhớ dự án BCDT – ít token, luôn áp dụng
+alwaysApply: true
+---
+
+# BCDT – Ghi nhớ
+
+- **Stack:** .NET 8 API, React (Vite, Ant Design), SQL Server. Bảng `BCDT_`, API `/api/v1/`.
+- **Trước build BE:** Tắt process BCDT.Api (tránh lock DLL). RUNBOOK 6.1.
+- **Task → tài liệu/agent:** TONG_HOP mục 3.2 (bảng), 3.3/3.5/3.7 (block "Cách giao AI"). AI_CONTEXT mục 6 (Agent/Skill).
+- **Xong task:** Verify (build + checklist) trước khi báo xong; cập nhật TONG_HOP theo bcdt-update-tong-hop-after-task.
+- **Tự động:** Thực hiện theo block/command, không hỏi xác nhận trừ khi thiếu thông tin bắt buộc (vd task name, id).
+- **Seed data tiếng Việt:** Chạy sqlcmd với **-f 65001** khi file seed là UTF-8; rule **bcdt-seed-data-encoding**.

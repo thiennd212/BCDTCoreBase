@@ -1,0 +1,55 @@
+---
+description: SQL Server conventions for BCDT
+globs: **/*.sql
+alwaysApply: false
+---
+
+# SQL Server Standards
+
+## Naming
+- Tables: `BCDT_{Entity}` (e.g., `BCDT_FormDefinition`)
+- Columns: PascalCase (`CreatedAt`, `OrganizationId`)
+- Indexes: `IX_{Table}_{Columns}`
+- Foreign Keys: `FK_{Table}_{RefTable}`
+- Constraints: `UQ_`, `CK_`, `DF_`
+
+## Required Columns (every table)
+```sql
+[Id] INT IDENTITY(1,1) PRIMARY KEY,  -- or BIGINT for large tables
+[CreatedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+[CreatedBy] INT NOT NULL,
+[UpdatedAt] DATETIME2 NULL,
+[UpdatedBy] INT NULL,
+[IsDeleted] BIT NOT NULL DEFAULT 0   -- soft delete
+```
+
+## Indexes
+```sql
+-- ✅ Always index FKs
+CREATE INDEX IX_Submission_Org ON BCDT_ReportSubmission(OrganizationId);
+
+-- ✅ Filtered index for active records
+CREATE INDEX IX_User_Active ON BCDT_User(IsActive) WHERE IsDeleted = 0;
+
+-- ✅ Columnstore for analytics
+CREATE NONCLUSTERED COLUMNSTORE INDEX NCCI_DataRow 
+ON BCDT_ReportDataRow(NumericValue1, NumericValue2);
+```
+
+## Row-Level Security
+```sql
+-- Set user context at request start
+EXEC sp_set_session_context N'UserId', @UserId;
+```
+
+## Seed dữ liệu test (nhập liệu Excel)
+- **Thứ tự script:** 01→14 (schema) rồi mới chạy seed. Script seed: `docs/script_core/sql/v2/seed_test_excel_entry.sql`, `seed_test_excel_full_form.sql`, `seed_more_submissions_excel_entry.sql`. Hướng dẫn: [README_SEED_TEST.md](../../docs/script_core/sql/v2/README_SEED_TEST.md).
+- **Seed qua MCP:** Chạy lần lượt nội dung (một batch, không GO) các file: `seed_mcp_1_test_excel_entry.sql`, `seed_mcp_2_test_excel_full.sql`, `seed_mcp_3_more_submissions.sql`. Chi tiết: [SEED_VIA_MCP.md](../../docs/script_core/sql/v2/SEED_VIA_MCP.md). PowerShell: `Ensure-TestData.ps1` trong sql/v2.
+- **Tiếng Việt / UTF-8:** File seed có tiếng Việt phải lưu UTF-8; khi chạy bằng **sqlcmd** bắt buộc **-f 65001** để tránh mojibake. Rule chi tiết: **bcdt-seed-data-encoding**.
+- **FormColumn:** Bảng BCDT_FormColumn có cột **ColumnGroupName** (NVARCHAR, nullable) cho header phân cấp 1–2 tầng; script: `16.add_form_column_group.sql`.
+
+## Don't
+- Don't use SELECT * (specify columns)
+- Don't use cursors (use set-based operations)
+- Don't store business logic in triggers
+- Don't skip indexes on foreign keys

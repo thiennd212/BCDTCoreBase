@@ -1,0 +1,6 @@
+{
+  "plugins": {
+    "context7-plugin": { "enabled": false },
+    "parallel-plugin": { "enabled": false }
+  }
+}

@@ -1,0 +1,2210 @@
+{
+  "info": {
+    "_postman_id": "bcdt-api-1111-2222-3333-444455556666",
+    "name": "BCDT API",
+    "description": "Collection kiểm thử API BCDT: Auth (B1), Organizations (B4), Users (B5), Form (B7, B8, B12), P8 (DataSource, FilterDefinition, Placeholder dòng/cột), Submissions (workbook-data), Workflow (B9), Reporting (B10), Notifications. Base URL: http://localhost:5080. Chạy Login trước để lưu accessToken, refreshToken.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5080" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "formId", "value": "1" },
+    { "key": "sheetId", "value": "1" },
+    { "key": "columnId", "value": "1" },
+    { "key": "rowId", "value": "1" },
+    { "key": "submissionId", "value": "1" },
+    { "key": "workflowDefinitionId", "value": "1" },
+    { "key": "workflowInstanceId", "value": "1" },
+    { "key": "regionId", "value": "1" },
+    { "key": "occurrenceId", "value": "1" },
+    { "key": "dataSourceId", "value": "1" },
+    { "key": "filterDefinitionId", "value": "1" },
+    { "key": "columnRegionId", "value": "1" },
+    { "key": "columnOccurrenceId", "value": "1" },
+    { "key": "catalogId", "value": "1" },
+    { "key": "indicatorId", "value": "1" },
+    { "key": "organizationTypeId", "value": "1" },
+    { "key": "reportingFrequencyId", "value": "1" },
+    { "key": "reportingPeriodId", "value": "1" },
+    { "key": "notificationId", "value": "1" },
+    { "key": "entityTypeId", "value": "1" },
+    { "key": "referenceEntityId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "JWT (B1): Login, Me, Refresh, Logout.",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.success && json.data) {",
+                  "  if (json.data.accessToken) pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "  if (json.data.refreshToken) pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}" },
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "Đăng nhập; script Tests lưu token vào biến collection."
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/me",
+            "description": "Lấy thông tin user từ JWT."
+          }
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
+            "description": "Đổi accessToken mới từ refreshToken."
+          }
+        },
+        {
+          "name": "Me Roles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/me/roles",
+            "description": "Danh sách vai trò của user hiện tại (dùng cho chức năng Chuyển vai trò trên FE)."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "Thu hồi refreshToken."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "description": "Organization CRUD (B4). Query: parentId, organizationTypeId, includeInactive; list hỗ trợ all=true (flat).",
+      "item": [
+        {
+          "name": "List organizations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/organizations",
+            "description": "Danh sách đơn vị. Thêm ?all=true để lấy flat (build cây FE)."
+          }
+        },
+        {
+          "name": "Get organization by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/organizations/1",
+            "description": "Chi tiết đơn vị. Sửa 1 thành id cần xem."
+          }
+        },
+        {
+          "name": "Create organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"DV_TEST\",\n  \"name\": \"Đơn vị test\",\n  \"organizationTypeId\": 1,\n  \"parentId\": null,\n  \"isActive\": true,\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/organizations",
+            "description": "Tạo đơn vị mới."
+          }
+        },
+        {
+          "name": "Update organization",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"DV_TEST\",\n  \"name\": \"Đơn vị test (cập nhật)\",\n  \"organizationTypeId\": 1,\n  \"parentId\": null,\n  \"isActive\": true,\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/organizations/1",
+            "description": "Cập nhật đơn vị. Sửa 1 thành id."
+          }
+        },
+        {
+          "name": "Delete organization",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/organizations/1",
+            "description": "Xóa đơn vị. Sửa 1 thành id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reference Entity Types",
+      "description": "Loại thực thể tham chiếu. CRUD: list, get by id, create, update, delete (409 nếu đã có reference entity thuộc type).",
+      "item": [
+        {
+          "name": "List reference entity types",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reference-entity-types",
+            "description": "Danh sách loại thực thể. Query: includeInactive."
+          }
+        },
+        {
+          "name": "Get reference entity type by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reference-entity-types/{{entityTypeId}}",
+            "description": "Chi tiết loại thực thể theo Id."
+          }
+        },
+        {
+          "name": "Create reference entity type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"LOAI_TEST\",\n  \"name\": \"Loại test\",\n  \"description\": \"Tạo từ Postman\",\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/reference-entity-types",
+            "description": "Tạo loại thực thể (code unique). 201 Created."
+          }
+        },
+        {
+          "name": "Update reference entity type",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Loại test (cập nhật)\",\n  \"description\": \"Mô tả cập nhật\",\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/reference-entity-types/{{entityTypeId}}",
+            "description": "Cập nhật loại (không đổi code)."
+          }
+        },
+        {
+          "name": "Delete reference entity type",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reference-entity-types/{{entityTypeId}}",
+            "description": "Xóa loại (409 nếu đã có bản ghi tham chiếu thuộc type)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reference Entities",
+      "description": "Dữ liệu tham chiếu phân cấp. Query: entityTypeId, parentId, all, includeInactive. all=true trả flat (build cây FE).",
+      "item": [
+        {
+          "name": "List reference entities (all)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reference-entities?entityTypeId={{entityTypeId}}&all=true&includeInactive=true",
+            "description": "Danh sách flat theo loại; FE dùng buildTree."
+          }
+        },
+        {
+          "name": "Get reference entity by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reference-entities/{{referenceEntityId}}",
+            "description": "Chi tiết bản ghi tham chiếu."
+          }
+        },
+        {
+          "name": "Create reference entity",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entityTypeId\": 1,\n  \"code\": \"REF_01\",\n  \"name\": \"Bản ghi tham chiếu 01\",\n  \"parentId\": null,\n  \"displayOrder\": 0,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/reference-entities",
+            "description": "Tạo bản ghi tham chiếu (code unique trong loại)."
+          }
+        },
+        {
+          "name": "Update reference entity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bản ghi tham chiếu 01 (cập nhật)\",\n  \"parentId\": null,\n  \"displayOrder\": 0,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/reference-entities/{{referenceEntityId}}",
+            "description": "Cập nhật (không đổi entityTypeId, code)."
+          }
+        },
+        {
+          "name": "Delete reference entity",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reference-entities/{{referenceEntityId}}",
+            "description": "Xóa (409 nếu có con)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "User management CRUD (B5).",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/users",
+            "description": "Danh sách người dùng. Query: organizationId, includeInactive."
+          }
+        },
+        {
+          "name": "Get user by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/users/1",
+            "description": "Chi tiết người dùng. Sửa 1 thành id."
+          }
+        },
+        {
+          "name": "Create user",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"user_test\",\n  \"password\": \"Test@123\",\n  \"email\": \"user_test@test.local\",\n  \"fullName\": \"Người dùng test\",\n  \"isActive\": true,\n  \"roleIds\": [2],\n  \"organizationIds\": [1],\n  \"primaryOrganizationId\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users",
+            "description": "Tạo người dùng mới."
+          }
+        },
+        {
+          "name": "Update user",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user_test@test.local\",\n  \"fullName\": \"Người dùng test (cập nhật)\",\n  \"isActive\": true,\n  \"roleIds\": [2],\n  \"organizationIds\": [1],\n  \"primaryOrganizationId\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/1",
+            "description": "Cập nhật người dùng. Sửa 1 thành id."
+          }
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/users/1",
+            "description": "Xóa người dùng. Sửa 1 thành id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Definitions",
+      "description": "Form Definition CRUD (B7). Excel Generator: GET template.",
+      "item": [
+        {
+          "name": "List forms",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms",
+            "description": "Danh sách biểu mẫu. Query: status, formType, includeInactive."
+          }
+        },
+        {
+          "name": "Get form by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}",
+            "description": "Chi tiết biểu mẫu theo Id."
+          }
+        },
+        {
+          "name": "Get form by code",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/code/BC_MAU",
+            "description": "Chi tiết biểu mẫu theo Code. Sửa BC_MAU thành code thực tế."
+          }
+        },
+        {
+          "name": "Get form versions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/versions",
+            "description": "Danh sách phiên bản của biểu mẫu."
+          }
+        },
+        {
+          "name": "Get template (Excel)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/template",
+            "description": "Tải file Excel template. Query: fillBinding=true, organizationId, reportingPeriodId (cho Data Binding)."
+          }
+        },
+        {
+          "name": "Get template with fillBinding",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/template?fillBinding=true",
+            "description": "Template với giá trị điền theo Data Binding (Static, Organization, System...)."
+          }
+        },
+        {
+          "name": "Create form from template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "file", "type": "file", "src": "" },
+              { "key": "name", "value": "Biểu mẫu từ template", "type": "text" },
+              { "key": "code", "value": "BC_TEMPLATE", "type": "text", "disabled": true }
+            ]},
+            "url": "{{baseUrl}}/api/v1/forms/from-template",
+            "description": "Tạo biểu mẫu từ file Excel (.xlsx). FormData: file, name, code (tùy chọn)."
+          }
+        },
+        {
+          "name": "Upload template (Excel)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "file", "type": "file", "src": "" }
+            ]},
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/template",
+            "description": "Upload file Excel template; lưu TemplateDisplayJson (Fortune-sheet) cho nhập liệu."
+          }
+        },
+        {
+          "name": "Get template display (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/template-display",
+            "description": "Lấy template display (JSON Fortune-sheet). 204 nếu chưa có."
+          }
+        },
+        {
+          "name": "Create form",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"BC_MAU\",\n  \"name\": \"Biểu mẫu mẫu\",\n  \"formType\": \"Input\",\n  \"deadlineOffsetDays\": 5,\n  \"allowLateSubmission\": true,\n  \"requireApproval\": true,\n  \"autoCreateReport\": false,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms",
+            "description": "Tạo biểu mẫu mới."
+          }
+        },
+        {
+          "name": "Update form",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"BC_MAU\",\n  \"name\": \"Biểu mẫu mẫu (cập nhật)\",\n  \"formType\": \"Input\",\n  \"deadlineOffsetDays\": 5,\n  \"allowLateSubmission\": true,\n  \"requireApproval\": true,\n  \"autoCreateReport\": false,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}",
+            "description": "Cập nhật biểu mẫu."
+          }
+        },
+        {
+          "name": "Delete form",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}",
+            "description": "Xóa biểu mẫu."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Sheets",
+      "description": "Form Sheet CRUD (B8). Thay formId, sheetId trong URL hoặc dùng biến {{formId}}, {{sheetId}}.",
+      "item": [
+        {
+          "name": "List sheets",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets",
+            "description": "Danh sách sheet của form."
+          }
+        },
+        {
+          "name": "Get sheet by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}",
+            "description": "Chi tiết sheet."
+          }
+        },
+        {
+          "name": "Create sheet",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sheetIndex\": 0,\n  \"sheetName\": \"Sheet1\",\n  \"displayName\": \"Bảng 1\",\n  \"isDataSheet\": true,\n  \"isVisible\": true,\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets",
+            "description": "Tạo sheet mới."
+          }
+        },
+        {
+          "name": "Update sheet",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sheetIndex\": 0,\n  \"sheetName\": \"Sheet1\",\n  \"displayName\": \"Bảng 1 (cập nhật)\",\n  \"isDataSheet\": true,\n  \"isVisible\": true,\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}",
+            "description": "Cập nhật sheet."
+          }
+        },
+        {
+          "name": "Delete sheet",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}",
+            "description": "Xóa sheet."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Columns",
+      "description": "Form Column CRUD (B8). Dùng {{formId}}, {{sheetId}}, {{columnId}}.",
+      "item": [
+        {
+          "name": "List columns",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns",
+            "description": "Danh sách cột của sheet (flat)."
+          }
+        },
+        {
+          "name": "List columns (tree)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns?tree=true",
+            "description": "Danh sách cột dạng cây (B12 P2a)."
+          }
+        },
+        {
+          "name": "Get column by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}",
+            "description": "Chi tiết cột."
+          }
+        },
+        {
+          "name": "Create column",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"indicatorId\": {{indicatorId}},\n  \"columnCode\": \"A1\",\n  \"columnName\": \"Cột A1\",\n  \"excelColumn\": \"A\",\n  \"dataType\": \"Text\",\n  \"isRequired\": false,\n  \"isEditable\": true,\n  \"isHidden\": false,\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns",
+            "description": "Tạo cột mới."
+          }
+        },
+        {
+          "name": "Update column",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"indicatorId\": {{indicatorId}},\n  \"columnCode\": \"A1\",\n  \"columnName\": \"Cột A1 (cập nhật)\",\n  \"excelColumn\": \"A\",\n  \"dataType\": \"Text\",\n  \"isRequired\": false,\n  \"isEditable\": true,\n  \"isHidden\": false,\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}",
+            "description": "Cập nhật cột."
+          }
+        },
+        {
+          "name": "Delete column",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}",
+            "description": "Xóa cột."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Rows",
+      "description": "Form Row CRUD (B12 P2a). Phân cấp hàng (ParentId), tree=true. Dùng {{formId}}, {{sheetId}}, {{rowId}}.",
+      "item": [
+        {
+          "name": "List rows",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/rows",
+            "description": "Danh sách hàng của sheet (flat)."
+          }
+        },
+        {
+          "name": "List rows (tree)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/rows?tree=true",
+            "description": "Danh sách hàng dạng cây (B12 P2a)."
+          }
+        },
+        {
+          "name": "Get row by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/rows/{{rowId}}",
+            "description": "Chi tiết hàng."
+          }
+        },
+        {
+          "name": "Create row",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rowCode\": \"R1\",\n  \"rowName\": \"Hàng 1\",\n  \"excelRowStart\": 5,\n  \"rowType\": \"Data\",\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/rows",
+            "description": "Tạo hàng mới (FormStructureAdmin). ParentId, FormDynamicRegionId tùy chọn."
+          }
+        },
+        {
+          "name": "Update row",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rowCode\": \"R1\",\n  \"rowName\": \"Hàng 1 (cập nhật)\",\n  \"excelRowStart\": 5,\n  \"rowType\": \"Data\",\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/rows/{{rowId}}",
+            "description": "Cập nhật hàng (FormStructureAdmin)."
+          }
+        },
+        {
+          "name": "Delete row",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/rows/{{rowId}}",
+            "description": "Xóa hàng (FormStructureAdmin). Không xóa được nếu còn hàng con."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Column Data Binding",
+      "description": "Data Binding cho cột (B8). BindingType: Static, Database, API, Reference, Organization, System, Formula.",
+      "item": [
+        {
+          "name": "Get data binding",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}/data-binding",
+            "description": "Lấy cấu hình data binding của cột."
+          }
+        },
+        {
+          "name": "Create data binding",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bindingType\": \"Static\",\n  \"defaultValue\": \"\",\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}/data-binding",
+            "description": "Tạo data binding cho cột."
+          }
+        },
+        {
+          "name": "Update data binding",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bindingType\": \"Static\",\n  \"defaultValue\": \"N/A\",\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}/data-binding",
+            "description": "Cập nhật data binding."
+          }
+        },
+        {
+          "name": "Delete data binding",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}/data-binding",
+            "description": "Xóa data binding."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Column Mapping",
+      "description": "Column Mapping (Excel ↔ ReportDataRow) cho cột (B8).",
+      "item": [
+        {
+          "name": "Get column mapping",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}/column-mapping",
+            "description": "Lấy column mapping của cột."
+          }
+        },
+        {
+          "name": "Create column mapping",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetColumnName\": \"Col1\",\n  \"targetColumnIndex\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}/column-mapping",
+            "description": "Tạo column mapping."
+          }
+        },
+        {
+          "name": "Update column mapping",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetColumnName\": \"Col1\",\n  \"targetColumnIndex\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}/column-mapping",
+            "description": "Cập nhật column mapping."
+          }
+        },
+        {
+          "name": "Delete column mapping",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/columns/{{columnId}}/column-mapping",
+            "description": "Xóa column mapping."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Dynamic Regions",
+      "description": "Vùng chỉ tiêu động (B12, R4). CRUD dynamic-regions; cần FormStructureAdmin cho POST/PUT/DELETE.",
+      "item": [
+        {
+          "name": "List dynamic regions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-regions",
+            "description": "Danh sách vùng chỉ tiêu động của sheet."
+          }
+        },
+        {
+          "name": "Get dynamic region by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-regions/{{regionId}}",
+            "description": "Chi tiết một vùng chỉ tiêu động."
+          }
+        },
+        {
+          "name": "Create dynamic region",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"excelRowStart\": 10,\n  \"excelRowEnd\": null,\n  \"excelColName\": \"A\",\n  \"excelColValue\": \"B\",\n  \"maxRows\": 100,\n  \"indicatorExpandDepth\": 1,\n  \"indicatorCatalogId\": null,\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-regions",
+            "description": "Tạo vùng chỉ tiêu động (FormStructureAdmin)."
+          }
+        },
+        {
+          "name": "Update dynamic region",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"excelRowStart\": 10,\n  \"excelRowEnd\": null,\n  \"excelColName\": \"A\",\n  \"excelColValue\": \"B\",\n  \"maxRows\": 100,\n  \"indicatorExpandDepth\": 1,\n  \"indicatorCatalogId\": null,\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-regions/{{regionId}}",
+            "description": "Cập nhật vùng chỉ tiêu động."
+          }
+        },
+        {
+          "name": "Delete dynamic region",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-regions/{{regionId}}",
+            "description": "Xóa vùng chỉ tiêu động."
+          }
+        }
+      ]
+    },
+    {
+      "name": "P8 – Nguồn dữ liệu (Data Sources)",
+      "description": "P8a: Nguồn dữ liệu (Table, View, Catalog, API) cho lọc động. CRUD; GET columns (metadata). FormStructureAdmin cho POST/PUT/DELETE.",
+      "item": [
+        {
+          "name": "List data sources",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/data-sources",
+            "description": "Danh sách nguồn dữ liệu."
+          }
+        },
+        {
+          "name": "Get data source by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/data-sources/{{dataSourceId}}",
+            "description": "Chi tiết nguồn dữ liệu."
+          }
+        },
+        {
+          "name": "Get data source columns",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/data-sources/{{dataSourceId}}/columns",
+            "description": "Metadata cột (để cấu hình filter)."
+          }
+        },
+        {
+          "name": "Create data source",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"DS_ORG\",\n  \"name\": \"Nguồn đơn vị\",\n  \"sourceType\": \"Table\",\n  \"sourceRef\": \"BCDT_Organization\",\n  \"displayColumn\": \"Name\",\n  \"valueColumn\": null,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/data-sources",
+            "description": "Tạo nguồn dữ liệu (FormStructureAdmin)."
+          }
+        },
+        {
+          "name": "Update data source",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"DS_ORG\",\n  \"name\": \"Nguồn đơn vị\",\n  \"sourceType\": \"Table\",\n  \"sourceRef\": \"BCDT_Organization\",\n  \"displayColumn\": \"Name\",\n  \"valueColumn\": null,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/data-sources/{{dataSourceId}}",
+            "description": "Cập nhật nguồn dữ liệu."
+          }
+        },
+        {
+          "name": "Delete data source",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/data-sources/{{dataSourceId}}",
+            "description": "Xóa nguồn dữ liệu."
+          }
+        }
+      ]
+    },
+    {
+      "name": "P8 – Bộ lọc (Filter Definitions)",
+      "description": "P8a: Định nghĩa bộ lọc (AND/OR + conditions). Dùng chung cho placeholder dòng và cột. FormStructureAdmin cho POST/PUT/DELETE.",
+      "item": [
+        {
+          "name": "List filter definitions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/filter-definitions",
+            "description": "Danh sách bộ lọc."
+          }
+        },
+        {
+          "name": "Get filter definition by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/filter-definitions/{{filterDefinitionId}}",
+            "description": "Chi tiết bộ lọc (kèm conditions)."
+          }
+        },
+        {
+          "name": "Create filter definition",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"FLT_ALL\",\n  \"name\": \"Lấy tất cả\",\n  \"logicalOperator\": \"AND\",\n  \"dataSourceId\": null,\n  \"conditions\": [\n    { \"conditionOrder\": 0, \"field\": \"Id\", \"operator\": \"Gt\", \"valueType\": \"Literal\", \"value\": \"0\" }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/filter-definitions",
+            "description": "Tạo bộ lọc (kèm conditions)."
+          }
+        },
+        {
+          "name": "Update filter definition",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"FLT_ALL\",\n  \"name\": \"Lấy tất cả\",\n  \"logicalOperator\": \"AND\",\n  \"dataSourceId\": null,\n  \"conditions\": [\n    { \"conditionOrder\": 0, \"field\": \"Id\", \"operator\": \"Gt\", \"valueType\": \"Literal\", \"value\": \"0\" }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/filter-definitions/{{filterDefinitionId}}",
+            "description": "Cập nhật bộ lọc (kèm conditions)."
+          }
+        },
+        {
+          "name": "Delete filter definition",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/filter-definitions/{{filterDefinitionId}}",
+            "description": "Xóa bộ lọc."
+          }
+        }
+      ]
+    },
+    {
+      "name": "P8 – Vị trí placeholder (dòng)",
+      "description": "P8a/P8b: Vị trí placeholder dòng (FormPlaceholderOccurrence). Mỗi bản ghi = một dòng template; build workbook mở rộng N hàng. Cần formId, sheetId.",
+      "item": [
+        {
+          "name": "List placeholder occurrences",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-occurrences",
+            "description": "Danh sách vị trí placeholder dòng của sheet."
+          }
+        },
+        {
+          "name": "Get placeholder occurrence by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-occurrences/{{occurrenceId}}",
+            "description": "Chi tiết một vị trí placeholder dòng."
+          }
+        },
+        {
+          "name": "Create placeholder occurrence",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formDynamicRegionId\": 1,\n  \"excelRowStart\": 5,\n  \"filterDefinitionId\": null,\n  \"dataSourceId\": null,\n  \"displayOrder\": 0,\n  \"maxRows\": null\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-occurrences",
+            "description": "Tạo vị trí placeholder dòng (FormStructureAdmin)."
+          }
+        },
+        {
+          "name": "Update placeholder occurrence",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formDynamicRegionId\": 1,\n  \"excelRowStart\": 5,\n  \"filterDefinitionId\": null,\n  \"dataSourceId\": null,\n  \"displayOrder\": 0,\n  \"maxRows\": null\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-occurrences/{{occurrenceId}}",
+            "description": "Cập nhật vị trí placeholder dòng."
+          }
+        },
+        {
+          "name": "Delete placeholder occurrence",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-occurrences/{{occurrenceId}}",
+            "description": "Xóa vị trí placeholder dòng."
+          }
+        }
+      ]
+    },
+    {
+      "name": "P8 – Vùng cột động (Dynamic Column Regions)",
+      "description": "P8e: Định nghĩa placeholder cột (FormDynamicColumnRegion). ColumnSourceType: ByReportingPeriod, ByCatalog, ByDataSource, Fixed. FormStructureAdmin cho POST/PUT/DELETE.",
+      "item": [
+        {
+          "name": "List dynamic column regions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-column-regions",
+            "description": "Danh sách vùng cột động của sheet."
+          }
+        },
+        {
+          "name": "Get dynamic column region by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-column-regions/{{columnRegionId}}",
+            "description": "Chi tiết một vùng cột động."
+          }
+        },
+        {
+          "name": "Create dynamic column region",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"COL_BY_PERIOD\",\n  \"name\": \"Cột theo kỳ\",\n  \"columnSourceType\": \"ByReportingPeriod\",\n  \"columnSourceRef\": null,\n  \"labelColumn\": null,\n  \"displayOrder\": 0,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-column-regions",
+            "description": "Tạo vùng cột động (FormStructureAdmin)."
+          }
+        },
+        {
+          "name": "Update dynamic column region",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"COL_BY_PERIOD\",\n  \"name\": \"Cột theo kỳ\",\n  \"columnSourceType\": \"ByReportingPeriod\",\n  \"columnSourceRef\": null,\n  \"labelColumn\": null,\n  \"displayOrder\": 0,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-column-regions/{{columnRegionId}}",
+            "description": "Cập nhật vùng cột động."
+          }
+        },
+        {
+          "name": "Delete dynamic column region",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/dynamic-column-regions/{{columnRegionId}}",
+            "description": "Xóa vùng cột động."
+          }
+        }
+      ]
+    },
+    {
+      "name": "P8 – Vị trí placeholder cột",
+      "description": "P8e: Vị trí placeholder cột (FormPlaceholderColumnOccurrence). Build workbook sinh N cột tại ExcelColStart. Cần formId, sheetId.",
+      "item": [
+        {
+          "name": "List placeholder column occurrences",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-column-occurrences",
+            "description": "Danh sách vị trí placeholder cột của sheet."
+          }
+        },
+        {
+          "name": "Get placeholder column occurrence by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-column-occurrences/{{columnOccurrenceId}}",
+            "description": "Chi tiết một vị trí placeholder cột."
+          }
+        },
+        {
+          "name": "Create placeholder column occurrence",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formDynamicColumnRegionId\": 1,\n  \"excelColStart\": 5,\n  \"filterDefinitionId\": null,\n  \"displayOrder\": 0,\n  \"maxColumns\": null\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-column-occurrences",
+            "description": "Tạo vị trí placeholder cột (FormStructureAdmin)."
+          }
+        },
+        {
+          "name": "Update placeholder column occurrence",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formDynamicColumnRegionId\": 1,\n  \"excelColStart\": 5,\n  \"filterDefinitionId\": null,\n  \"displayOrder\": 0,\n  \"maxColumns\": null\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-column-occurrences/{{columnOccurrenceId}}",
+            "description": "Cập nhật vị trí placeholder cột."
+          }
+        },
+        {
+          "name": "Delete placeholder column occurrence",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/sheets/{{sheetId}}/placeholder-column-occurrences/{{columnOccurrenceId}}",
+            "description": "Xóa vị trí placeholder cột."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Submissions",
+      "description": "Report Submission CRUD, Presentation, Upload Excel (Data Storage, Submission).",
+      "item": [
+        {
+          "name": "List submissions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions",
+            "description": "Danh sách submission. Query: formDefinitionId, organizationId, reportingPeriodId, status, includeDeleted."
+          }
+        },
+        {
+          "name": "Get submission by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}",
+            "description": "Chi tiết submission."
+          }
+        },
+        {
+          "name": "Get workbook-data",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/workbook-data",
+            "description": "Dữ liệu workbook (B12 P4, P8): sheets[].rows, columnHeaders, dynamicRegions (N hàng), dynamicColumnRegions (N cột). Dùng cho trang nhập liệu / export Excel."
+          }
+        },
+        {
+          "name": "Create submission",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formDefinitionId\": 1,\n  \"formVersionId\": 1,\n  \"organizationId\": 1,\n  \"reportingPeriodId\": 1,\n  \"status\": \"Draft\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/submissions",
+            "description": "Tạo submission mới. 409 nếu trùng Form+Org+Period."
+          }
+        },
+        {
+          "name": "Bulk create submissions",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"formDefinitionId\": 1,\n  \"formVersionId\": 1,\n  \"reportingPeriodId\": 1,\n  \"organizationIds\": [2, 3]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/submissions/bulk",
+            "description": "Tạo hàng loạt submission (một per org). Trả createdIds, skippedCount, errors."
+          }
+        },
+        {
+          "name": "Update submission",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Draft\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}",
+            "description": "Cập nhật submission."
+          }
+        },
+        {
+          "name": "Delete submission",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}",
+            "description": "Xóa submission (soft delete)."
+          }
+        },
+        {
+          "name": "Get presentation",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/presentation",
+            "description": "Lấy ReportPresentation (WorkbookJson, fileSize) của submission."
+          }
+        },
+        {
+          "name": "Get dynamic indicators",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/dynamic-indicators",
+            "description": "Danh sách chỉ tiêu động của submission (B12, R4)."
+          }
+        },
+        {
+          "name": "Put dynamic indicators",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"formDynamicRegionId\": 1, \"rowOrder\": 0, \"indicatorName\": \"Chỉ tiêu 1\", \"indicatorValue\": \"100\", \"dataType\": \"Number\" }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/dynamic-indicators",
+            "description": "Ghi đè danh sách chỉ tiêu động (batch). FormDynamicRegionId phải thuộc form của submission."
+          }
+        },
+        {
+          "name": "Upsert presentation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workbookJson\": \"{}\",\n  \"workbookHash\": \"\",\n  \"fileSize\": 0,\n  \"sheetCount\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/presentation",
+            "description": "Tạo hoặc cập nhật presentation (Layer 1 JSON)."
+          }
+        },
+        {
+          "name": "Create presentation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workbookJson\": \"{}\",\n  \"workbookHash\": \"\",\n  \"fileSize\": 0,\n  \"sheetCount\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/presentation",
+            "description": "Tạo presentation mới (chỉ khi chưa có). 409 nếu đã có."
+          }
+        },
+        {
+          "name": "Upload Excel",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "", "description": "Chọn file .xlsx hoặc .xls" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/upload-excel",
+            "description": "Upload file Excel cho submission. Multipart form-data, key 'file'. Đọc theo FormColumnMapping, ghi ReportDataRow và ReportPresentation."
+          }
+        },
+        {
+          "name": "Sync from presentation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/sync-from-presentation",
+            "description": "Đồng bộ ReportDataRow từ ReportPresentation (WorkbookJson)."
+          }
+        },
+        {
+          "name": "Export PDF",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/pdf",
+            "description": "Xuất PDF submission (Phase 4). Trả file application/pdf. 404 nếu submission không tồn tại."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "Thông báo in-app (Phase 4). GET list, PATCH mark read, POST create (test).",
+      "item": [
+        {
+          "name": "List notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/notifications",
+            "description": "Danh sách thông báo của user. Query: unreadOnly=true."
+          }
+        },
+        {
+          "name": "Mark notification read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/notifications/1/read",
+            "description": "Đánh dấu đã đọc. Sửa 1 thành notification Id."
+          }
+        },
+        {
+          "name": "Create notification (test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 0,\n  \"type\": \"Reminder\",\n  \"title\": \"Nhắc hạn nộp\",\n  \"message\": \"Báo cáo kỳ 2026-01 sắp đến hạn.\",\n  \"priority\": \"Normal\",\n  \"channels\": \"InApp\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/notifications",
+            "description": "Tạo thông báo (userId=0 dùng user đăng nhập)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Report Presentations",
+      "description": "ReportPresentation theo id (GET/PUT).",
+      "item": [
+        {
+          "name": "Get report presentation by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/report-presentations/1",
+            "description": "Chi tiết presentation theo Id. Sửa 1 thành id."
+          }
+        },
+        {
+          "name": "Update report presentation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workbookJson\": \"{}\",\n  \"workbookHash\": \"\",\n  \"fileSize\": 0,\n  \"sheetCount\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/report-presentations/1",
+            "description": "Cập nhật presentation. Sửa 1 thành id."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflow (B9)",
+      "description": "WorkflowDefinition, WorkflowStep, FormWorkflowConfig, Submit, Approve/Reject/Request Revision.",
+      "item": [
+        {
+          "name": "List workflow definitions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/workflow-definitions",
+            "description": "Danh sách workflow. Query: includeInactive."
+          }
+        },
+        {
+          "name": "Get workflow definition by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/workflow-definitions/{{workflowDefinitionId}}",
+            "description": "Chi tiết workflow theo Id."
+          }
+        },
+        {
+          "name": "Create workflow definition",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"WF_TEST\",\n  \"name\": \"Workflow test 2 cấp\",\n  \"totalSteps\": 2,\n  \"isDefault\": false,\n  \"isActive\": true\n}" },
+            "url": "{{baseUrl}}/api/v1/workflow-definitions",
+            "description": "Tạo workflow (TotalSteps 1-5)."
+          }
+        },
+        {
+          "name": "Update workflow definition",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"code\": \"WF_TEST\",\n  \"name\": \"Workflow test (cập nhật)\",\n  \"totalSteps\": 2,\n  \"isDefault\": false,\n  \"isActive\": true\n}" },
+            "url": "{{baseUrl}}/api/v1/workflow-definitions/{{workflowDefinitionId}}",
+            "description": "Cập nhật workflow."
+          }
+        },
+        {
+          "name": "Delete workflow definition",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/workflow-definitions/{{workflowDefinitionId}}",
+            "description": "Xóa workflow."
+          }
+        },
+        {
+          "name": "List workflow steps",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/workflow-definitions/{{workflowDefinitionId}}/steps",
+            "description": "Danh sách bước của workflow."
+          }
+        },
+        {
+          "name": "Create workflow step",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"stepOrder\": 1,\n  \"stepName\": \"Trưởng phòng duyệt\",\n  \"approverRoleId\": 2,\n  \"canReject\": true,\n  \"canRequestRevision\": true,\n  \"isActive\": true\n}" },
+            "url": "{{baseUrl}}/api/v1/workflow-definitions/{{workflowDefinitionId}}/steps",
+            "description": "Thêm bước (ApproverRoleId từ BCDT_Role: UNIT_ADMIN=2, FORM_ADMIN, ...)."
+          }
+        },
+        {
+          "name": "Get workflow step by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/workflow-definitions/{{workflowDefinitionId}}/steps/1",
+            "description": "Chi tiết bước. Sửa 1 thành stepId."
+          }
+        },
+        {
+          "name": "Update workflow step",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"stepOrder\": 1,\n  \"stepName\": \"Trưởng phòng duyệt (cập nhật)\",\n  \"approverRoleId\": 2,\n  \"canReject\": true,\n  \"canRequestRevision\": true,\n  \"isActive\": true\n}" },
+            "url": "{{baseUrl}}/api/v1/workflow-definitions/{{workflowDefinitionId}}/steps/1",
+            "description": "Cập nhật bước. Sửa 1 thành stepId."
+          }
+        },
+        {
+          "name": "Delete workflow step",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/workflow-definitions/{{workflowDefinitionId}}/steps/1",
+            "description": "Xóa bước. Sửa 1 thành stepId."
+          }
+        },
+        {
+          "name": "List form workflow config",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/workflow-config",
+            "description": "Danh sách config workflow của form."
+          }
+        },
+        {
+          "name": "Create form workflow config",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"formDefinitionId\": 1,\n  \"workflowDefinitionId\": 1,\n  \"organizationTypeId\": null,\n  \"isActive\": true\n}" },
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/workflow-config",
+            "description": "Gán workflow cho form. formDefinitionId trong body = formId URL."
+          }
+        },
+        {
+          "name": "Delete form workflow config",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/forms/{{formId}}/workflow-config/1",
+            "description": "Xóa config. Sửa 1 thành configId."
+          }
+        },
+        {
+          "name": "Submit submission",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/submit",
+            "description": "Gửi submission (Draft → Submitted), tạo WorkflowInstance."
+          }
+        },
+        {
+          "name": "Get submission workflow instance",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/workflow-instance",
+            "description": "Lấy workflow instance của submission."
+          }
+        },
+        {
+          "name": "Get workflow instance approvals",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/workflow-instances/{{workflowInstanceId}}/approvals",
+            "description": "Lịch sử phê duyệt (timeline). 200: success, data là mảng (id, stepOrder, action, comments, approverId, approvedAt). 404 nếu instance không tồn tại."
+          }
+        },
+        {
+          "name": "Approve workflow instance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"comments\": \"Đã duyệt\"\n}" },
+            "url": "{{baseUrl}}/api/v1/workflow-instances/{{workflowInstanceId}}/approve",
+            "description": "Duyệt (next step hoặc Approved)."
+          }
+        },
+        {
+          "name": "Bulk approve workflow instances",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"workflowInstanceIds\": [1],\n  \"comments\": \"Bulk duyệt\"\n}" },
+            "url": "{{baseUrl}}/api/v1/workflow-instances/bulk-approve",
+            "description": "Duyệt hàng loạt (Phase 4). Trả succeededIds, failed[]."
+          }
+        },
+        {
+          "name": "Reject workflow instance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"comments\": \"Từ chối\"\n}" },
+            "url": "{{baseUrl}}/api/v1/workflow-instances/{{workflowInstanceId}}/reject",
+            "description": "Từ chối."
+          }
+        },
+        {
+          "name": "Request revision",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"comments\": \"Yêu cầu chỉnh sửa\"\n}" },
+            "url": "{{baseUrl}}/api/v1/workflow-instances/{{workflowInstanceId}}/request-revision",
+            "description": "Yêu cầu chỉnh sửa (submission.Status = Revision)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reporting & Dashboard (B10)",
+      "description": "Reporting Frequencies, Reporting Periods, Dashboard Admin/User, Submissions Aggregate.",
+      "item": [
+        {
+          "name": "List reporting frequencies",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reporting-frequencies",
+            "description": "Danh sách chu kỳ báo cáo (DAILY, WEEKLY, MONTHLY, ...)."
+          }
+        },
+        {
+          "name": "List reporting periods",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reporting-periods",
+            "description": "Danh sách kỳ báo cáo. Query: frequencyId, year, status, isCurrent."
+          }
+        },
+        {
+          "name": "Get current period",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reporting-periods/current?frequencyId=3",
+            "description": "Kỳ hiện tại (frequencyId=3 MONTHLY)."
+          }
+        },
+        {
+          "name": "Create reporting period",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reportingFrequencyId\": 3,\n  \"periodCode\": \"2026-01\",\n  \"periodName\": \"Tháng 01/2026\",\n  \"year\": 2026,\n  \"month\": 1,\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-31\",\n  \"deadline\": \"2026-02-10\",\n  \"status\": \"Open\",\n  \"isCurrent\": true\n}" },
+            "url": "{{baseUrl}}/api/v1/reporting-periods",
+            "description": "Tạo kỳ báo cáo."
+          }
+        },
+        {
+          "name": "Get reporting period by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reporting-periods/{{reportingPeriodId}}",
+            "description": "Chi tiết kỳ báo cáo theo Id."
+          }
+        },
+        {
+          "name": "Update reporting period",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reportingFrequencyId\": 3,\n  \"periodCode\": \"2026-01\",\n  \"periodName\": \"Tháng 01/2026 (cập nhật)\",\n  \"year\": 2026,\n  \"month\": 1,\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-31\",\n  \"deadline\": \"2026-02-10\",\n  \"status\": \"Open\",\n  \"isCurrent\": true\n}" },
+            "url": "{{baseUrl}}/api/v1/reporting-periods/{{reportingPeriodId}}",
+            "description": "Cập nhật kỳ báo cáo."
+          }
+        },
+        {
+          "name": "Delete reporting period",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reporting-periods/{{reportingPeriodId}}",
+            "description": "Xóa kỳ báo cáo."
+          }
+        },
+        {
+          "name": "Dashboard admin stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/dashboard/admin/stats",
+            "description": "Thống kê Admin: submission theo status, theo kỳ, theo form."
+          }
+        },
+        {
+          "name": "Dashboard user tasks",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/dashboard/user/tasks",
+            "description": "Nhiệm vụ user: drafts, deadlines, pending approvals."
+          }
+        },
+        {
+          "name": "Submissions aggregate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/aggregate",
+            "description": "Tính lại ReportSummary từ ReportDataRow."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Indicator Catalogs",
+      "description": "Danh mục chỉ tiêu – CRUD /api/v1/indicator-catalogs. Chỉ tiêu (Indicator) – CRUD /api/v1/indicator-catalogs/{catalogId}/indicators (hỗ trợ tree).",
+      "item": [
+        {
+          "name": "List catalogs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs?includeInactive=false",
+            "description": "Danh sách danh mục chỉ tiêu."
+          }
+        },
+        {
+          "name": "Get catalog by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}",
+            "description": "Chi tiết danh mục chỉ tiêu."
+          }
+        },
+        {
+          "name": "Create catalog",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"DM_TINH\",\"name\":\"Danh mục tỉnh thành\",\"scope\":\"Global\",\"displayOrder\":1,\"isActive\":true}"
+            },
+            "description": "Tạo danh mục chỉ tiêu (FormStructureAdmin)."
+          }
+        },
+        {
+          "name": "Update catalog",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Danh mục tỉnh thành (sửa)\",\"scope\":\"Global\",\"displayOrder\":1,\"isActive\":true}"
+            },
+            "description": "Cập nhật danh mục chỉ tiêu."
+          }
+        },
+        {
+          "name": "Delete catalog",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}",
+            "description": "Xóa danh mục chỉ tiêu (không có chỉ tiêu con)."
+          }
+        },
+        {
+          "name": "List indicators (flat)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}/indicators",
+            "description": "Danh sách chỉ tiêu trong danh mục (flat list)."
+          }
+        },
+        {
+          "name": "List indicators (tree)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}/indicators?tree=true",
+            "description": "Danh sách chỉ tiêu dạng cây."
+          }
+        },
+        {
+          "name": "Get indicator by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}/indicators/{{indicatorId}}",
+            "description": "Chi tiết chỉ tiêu."
+          }
+        },
+        {
+          "name": "Create indicator",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}/indicators",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"CT_001\",\"name\":\"Chỉ tiêu gốc\",\"dataType\":\"Number\",\"unit\":\"triệu đồng\",\"displayOrder\":1,\"isActive\":true}"
+            },
+            "description": "Tạo chỉ tiêu (FormStructureAdmin)."
+          }
+        },
+        {
+          "name": "Update indicator",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}/indicators/{{indicatorId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Chỉ tiêu gốc (sửa)\",\"dataType\":\"Number\",\"displayOrder\":1,\"isActive\":true}"
+            },
+            "description": "Cập nhật chỉ tiêu."
+          }
+        },
+        {
+          "name": "Delete indicator",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/indicator-catalogs/{{catalogId}}/indicators/{{indicatorId}}",
+            "description": "Xóa chỉ tiêu (không có chỉ tiêu con)."
+          }
+        },
+        {
+          "name": "Get indicator by code (global)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/indicators/by-code/_SPECIAL_GENERIC",
+            "description": "Phase 2b: Lấy chỉ tiêu theo Code toàn cục (vd. _SPECIAL_GENERIC cho Tạo cột mới)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organization Types",
+      "item": [
+        {
+          "name": "List Organization Types",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/organization-types?includeInactive=true",
+            "description": "Danh sách loại đơn vị."
+          }
+        },
+        {
+          "name": "Get Organization Type",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/organization-types/{{organizationTypeId}}",
+            "description": "Chi tiết loại đơn vị."
+          }
+        },
+        {
+          "name": "Create Organization Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"TINH\", \"name\": \"Tỉnh/TP\", \"level\": 2, \"parentTypeId\": 1, \"description\": \"Cấp tỉnh/thành phố\", \"isActive\": true}"
+            },
+            "url": "{{baseUrl}}/api/v1/organization-types",
+            "description": "Tạo loại đơn vị mới."
+          }
+        },
+        {
+          "name": "Update Organization Type",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Tỉnh/Thành phố trực thuộc TW\", \"level\": 2, \"parentTypeId\": 1, \"description\": \"Cấp tỉnh\", \"isActive\": true}"
+            },
+            "url": "{{baseUrl}}/api/v1/organization-types/{{organizationTypeId}}",
+            "description": "Cập nhật loại đơn vị."
+          }
+        },
+        {
+          "name": "Delete Organization Type",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/organization-types/{{organizationTypeId}}",
+            "description": "Xóa loại đơn vị (không có đơn vị con)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reporting Frequencies",
+      "item": [
+        {
+          "name": "List Reporting Frequencies",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reporting-frequencies?includeInactive=true",
+            "description": "Danh sách chu kỳ báo cáo."
+          }
+        },
+        {
+          "name": "Get Reporting Frequency",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reporting-frequencies/{{reportingFrequencyId}}",
+            "description": "Chi tiết chu kỳ báo cáo."
+          }
+        },
+        {
+          "name": "Create Reporting Frequency",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"BIANNUAL\", \"name\": \"Nửa năm\", \"nameEn\": \"Biannual\", \"daysInPeriod\": 182, \"cronExpression\": null, \"description\": \"Chu kỳ 6 tháng\", \"displayOrder\": 5, \"isActive\": true}"
+            },
+            "url": "{{baseUrl}}/api/v1/reporting-frequencies",
+            "description": "Tạo chu kỳ báo cáo mới."
+          }
+        },
+        {
+          "name": "Update Reporting Frequency",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Nửa năm (cập nhật)\", \"nameEn\": \"Biannual\", \"daysInPeriod\": 183, \"cronExpression\": null, \"description\": \"Chu kỳ 6 tháng\", \"displayOrder\": 5, \"isActive\": true}"
+            },
+            "url": "{{baseUrl}}/api/v1/reporting-frequencies/{{reportingFrequencyId}}",
+            "description": "Cập nhật chu kỳ báo cáo."
+          }
+        },
+        {
+          "name": "Delete Reporting Frequency",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/reporting-frequencies/{{reportingFrequencyId}}",
+            "description": "Xóa chu kỳ báo cáo (không có kỳ báo cáo sử dụng)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/notifications?unreadOnly=false",
+            "description": "Danh sách thông báo của user đang đăng nhập."
+          }
+        },
+        {
+          "name": "Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/notifications/unread-count",
+            "description": "Số thông báo chưa đọc."
+          }
+        },
+        {
+          "name": "Mark Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/notifications/{{notificationId}}/read",
+            "description": "Đánh dấu một thông báo đã đọc."
+          }
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/notifications/read-all",
+            "description": "Đánh dấu tất cả thông báo đã đọc."
+          }
+        },
+        {
+          "name": "Dismiss Notification",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/notifications/{{notificationId}}/dismiss",
+            "description": "Ẩn thông báo."
+          }
+        },
+        {
+          "name": "Create Notification (test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"userId\": 0, \"type\": \"Reminder\", \"title\": \"Test thông báo\", \"message\": \"Nội dung thông báo test.\", \"priority\": \"Normal\", \"channels\": \"InApp\"}"
+            },
+            "url": "{{baseUrl}}/api/v1/notifications",
+            "description": "Tạo thông báo test. userId=0 sẽ dùng current user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit",
+      "item": [
+        {
+          "name": "Get Submission Audit",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/audit",
+            "description": "Lịch sử thay đổi cell-level của submission."
+          }
+        }
+      ]
+    },
+    {
+      "name": "System Config",
+      "description": "Cấu hình hệ thống (Admin). Policy: FormStructureAdmin.",
+      "item": [
+        {
+          "name": "Get All System Config",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/system-config",
+            "description": "Danh sách tất cả cấu hình."
+          }
+        },
+        {
+          "name": "Get System Config By Key",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/system-config/System.Name",
+            "description": "Lấy cấu hình theo key (vd System.Name)."
+          }
+        },
+        {
+          "name": "Update System Config",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"configValue\": \"Hệ thống Báo cáo Điện tử Động\"}"
+            },
+            "url": "{{baseUrl}}/api/v1/system-config/System.Name",
+            "description": "Cập nhật giá trị cấu hình (key trong URL)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health",
+        "description": "Kiểm tra API đang chạy."
+      }
+    }
+  ]
+}

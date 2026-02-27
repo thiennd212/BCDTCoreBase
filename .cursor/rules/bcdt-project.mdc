@@ -1,0 +1,36 @@
+---
+description: BCDT project architecture and conventions
+alwaysApply: true
+---
+
+# BCDT Project Standards
+
+**AI:** Khi bắt đầu task, đọc [docs/AI_CONTEXT.md](../../docs/AI_CONTEXT.md) (và rule **bcdt-ai-context** nếu cần chi tiết) để nắm ngữ cảnh, tìm đúng tài liệu và giảm token.
+
+## Architecture
+- Layered: API → Application → Domain → Infrastructure
+- Hybrid data access: EF Core 8 (CRUD) + Dapper (queries, bulk)
+- Hybrid storage: JSON (presentation) + Relational (query)
+
+## Naming
+- Tables: `BCDT_` prefix (e.g., `BCDT_FormDefinition`)
+- API: `/api/v1/{resource}` RESTful
+- Services: `I{Name}Service` + `{Name}Service`
+- DTOs: `{Entity}Dto`, `{Entity}Request`, `{Entity}Response`
+
+## Patterns
+- Repository + Unit of Work for EF Core
+- Result<T> pattern (no exceptions for business logic)
+- CQRS-lite: Commands mutate, Queries read-only
+
+## Key Tables (44 total)
+- Organization: 4 tables (OrganizationType, Organization, User, UserOrganization)
+- Authorization: 9 tables (Role, Permission, RolePermission, UserRole, Menu, RoleMenu, DataScope, RoleDataScope, UserDelegation)
+- Form: 8 tables (FormDefinition, FormVersion, FormSheet, FormColumn, FormRow, FormCell, FormDataBinding, FormColumnMapping)
+- Data: 5 tables (ReportSubmission, ReportPresentation, ReportDataRow, ReportSummary, ReportDataAudit)
+
+## Don't
+- Don't put domain logic in controllers
+- Don't return EF entities from API (use DTOs)
+- Don't use stored procedures for business logic
+- Don't bypass Row-Level Security

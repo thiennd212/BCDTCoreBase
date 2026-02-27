@@ -1,0 +1,87 @@
+---
+description: Luôn kiểm tra lại sau khi làm việc – đảm bảo đúng, đủ
+alwaysApply: true
+---
+
+# Kiểm tra lại sau khi làm việc
+
+Sau khi hoàn thành một công việc (tạo/sửa code, chạy script, cấu hình), **luôn thực hiện bước kiểm tra** để đảm bảo việc đã làm **đúng** và **đủ**.
+
+## Nguyên tắc
+
+1. **Đúng:** Kết quả khớp yêu cầu (API trả đúng format, bảng/cột đúng schema, logic đúng spec).
+2. **Đủ:** Không thiếu (đủ endpoint, đủ bảng, đủ trường, đủ test) và không thừa (không tạo thứ không cần).
+
+## Build và tự test trước khi báo xong
+
+AI **bắt buộc** thực hiện **trước khi** trả lời user là đã xong:
+
+1. **Build khi cần thiết**
+   - **Trước khi chạy `dotnet build` cho backend:** Luôn **kiểm tra và hủy process BCDT.Api** nếu đang chạy để tránh lỗi file/DLL bị lock. Ví dụ (PowerShell): `Get-Process -Name "BCDT.Api" -ErrorAction SilentlyContinue | Stop-Process -Force`. Sau đó mới chạy `dotnet build ...`. (Chi tiết: RUNBOOK mục 6.1.)
+   - Mỗi khi đã **tạo hoặc sửa** code (C#, TypeScript, config, solution): chạy build trước khi báo hoàn thành.
+   - Backend: `dotnet build src/BCDT.Api/BCDT.Api.csproj` (hoặc `dotnet build` tại thư mục solution). Nếu build **Fail** → sửa lỗi, build lại; **không** báo Pass cho đến khi build thành công.
+   - **Build Fail do file bị lock bởi BCDT.Api:** Nếu vẫn báo lỗi "file is locked" / "The process cannot access the file ... BCDT.Api", AI **tự xử lý**: tắt process BCDT.Api rồi build lại (lệnh như trên); hoặc tìm PID từ thông báo lỗi rồi `Stop-Process -Id <pid> -Force`. Sau khi tắt, chạy lại `dotnet build ...`. Nếu cần test API sau đó, khởi động lại API trong nền (`dotnet run --project src/BCDT.Api/BCDT.Api.csproj --launch-profile http`).
+   - Frontend (nếu có sửa): `npm run build` trong thư mục `src/bcdt-web` (hoặc tương đương). Tương tự: Fail thì sửa rồi build lại.
+   - Nếu task không đụng code (vd chỉ chạy script SQL, chỉ sửa doc): có thể bỏ qua build, nhưng vẫn kiểm tra theo loại việc (vd query DB xác nhận schema).
+
+2. **Tự test lại kết quả**
+   - Chạy các bước kiểm tra **trước** khi trả lời user (theo mục "Cách kiểm tra" và "AI tự kiểm tra" bên dưới): build, gọi API, query DB, xác thực Postman JSON, v.v.
+   - Chỉ **sau khi** đã chạy và ghi nhận Pass/Fail mới báo cáo: *"1. Build: Pass. 2. …"*. Không báo "đã xong" rồi mới test; luôn test trước, báo sau.
+
+**Tóm tắt:** Build (khi đã sửa code) + chạy kiểm tra theo loại việc → chỉ khi có kết quả Pass (hoặc đã ghi rõ Fail và lỗi) mới trả lời user là hoàn thành.
+
+## Cách kiểm tra (tùy loại việc)
+
+| Loại việc | Kiểm tra gợi ý |
+|-----------|----------------|
+| Tạo/sửa API | Gọi endpoint (curl/Postman), kiểm tra response shape, status code, validation. **Postman + test cases:** theo rule **bcdt-postman-test-cases** (tự load khi sửa Controllers / postman / file đề xuất). |
+| Tạo/sửa DB (script, migration) | Query `sys.tables` / `sys.columns` hoặc chạy SELECT mẫu; so sánh với spec/tài liệu. |
+| Tạo/sửa entity/DTO | Build solution; kiểm tra reference, nullable, naming theo convention. |
+| Tạo/sửa UI | Mở trang trên browser; kiểm tra hiển thị, form, gọi API đúng. **E2E (bắt buộc khi sửa FE):** chạy `npm run test:e2e` trong `src/bcdt-web` khi BE API đang chạy tại http://localhost:5080; báo **Pass/Fail từng file spec** (login, pages, reference-entity-types, b12-p7…). Chi tiết: [docs/E2E_VERIFY.md](../../docs/E2E_VERIFY.md). Nếu không chạy E2E được: làm theo checklist "Kiểm tra cho AI" / MCP browser và ghi rõ lý do. **Form trong Modal:** theo rule bcdt-frontend mục "Yêu cầu FE – Modal form": MODAL_FORM size, chỉ scroll trang (body modal overflow visible), khi mở modal scroll trang + top offset + focus trường đầu (hooks), bố cục nhóm + 2 cột. **DevTools – Console và Issues (bắt buộc):** Trước khi bàn giao bất kỳ thay đổi FE nào, **phải mở DevTools** (F12) và kiểm tra:
+- **Console:** Không được còn **error** (vd. Uncaught Error, Too many re-renders, ReferenceError). Không được còn **warning** – gồm deprecated (vd. Modal `destroyOnClose` → dùng `destroyOnHidden`) và "useForm is not connected to any Form" (không gọi `form.resetFields()` trong `useEffect` khi `!modalOpen`; chỉ `setEditingId(null)`; dùng `setFieldsValue` trong openCreate/openEdit; Modal `destroyOnHidden={false}`). Xử lý hết error và warning rồi mới báo xong.
+- **Issues (tab Issues trong DevTools):** Nếu trình duyệt hiển thị tab Issues, kiểm tra không còn issue nghiêm trọng liên quan tới trang vừa sửa.
+AI khi làm task FE **bắt buộc** ghi trong báo cáo: *"DevTools Console: không error/warning"* hoặc liệt kê lỗi đã sửa. Nếu không kiểm tra DevTools thì không được báo hoàn thành task FE. **Ngôn ngữ (bắt buộc):** tất cả text/message hiển thị cho user phải **tiếng Việt** (label, placeholder, nút Cancel/OK → Hủy/Tạo, message, title); kiểm tra không còn chữ tiếng Anh trên giao diện. **Đảm bảo test cases** cho tính năng đó (chi tiết: rule **bcdt-postman-test-cases**). |
+| Refactor/rename | Grep tên cũ; build; chạy test liên quan. |
+
+## Test cases
+
+**Chi tiết (checklist, tạo/cập nhật *_TEST_CASES.md, chạy đủ bước):** rule **bcdt-postman-test-cases** (load khi sửa API / file đề xuất). AI vẫn bắt buộc chạy đủ test cases và báo Pass/Fail từng bước trước khi báo xong.
+
+## Ví dụ
+
+**Sau khi chạy script tạo schema:**
+- Chạy `SELECT name FROM sys.tables WHERE name LIKE 'BCDT_%' ORDER BY name` và đối chiếu với danh sách bảng trong tài liệu/script.
+
+**Sau khi thêm API mới:**
+- Gọi `GET/POST ...` và kiểm tra JSON trả về có đúng DTO, status 200/400/401 tùy case.
+
+**Sau khi sửa file cấu hình:**
+- Khởi động lại app và kiểm tra log/endpoint hoạt động (vd `/health`).
+
+## Checklist nhanh
+
+- [ ] Đã so sánh kết quả với yêu cầu hoặc tài liệu?
+- [ ] Đã **build lại** khi có sửa/tạo code? (Build Pass trước khi báo xong.)
+- [ ] Đã **tự test lại** kết quả (API, DB, Postman…) **trước** khi trả lời user?
+- [ ] Đã **cập nhật/chạy đủ test cases** (mục 7.1 hoặc `*_TEST_CASES.md` của tính năng), **không skip case nào**, và **báo Pass/Fail** từng case?
+- [ ] Có báo cáo hoặc ghi chú ngắn (vd “đủ 49 bảng”, “API trả đúng schema”)?
+- [ ] **Nếu sửa FE:** Đã chạy E2E (`npm run test:e2e` trong src/bcdt-web, BE tại 5080) và báo Pass/Fail từng spec? Đã mở DevTools (Console + Issues), không còn error/warning?
+
+Nếu kiểm tra phát hiện thiếu/sai: sửa ngay hoặc ghi rõ vào bước tiếp theo trước khi chuyển task.
+
+## Postman collection
+
+**Chi tiết (tạo/cập nhật collection, chuẩn bắt buộc, xác thực JSON):** rule **bcdt-postman-test-cases** (load khi sửa API / `docs/postman/`). Khi tạo hoặc sửa API vẫn bắt buộc cập nhật Postman và báo "Postman collection: Pass" sau khi parse JSON thành công.
+
+## AI tự kiểm tra
+
+**Sau khi hoàn thành task** (và **trước khi báo user là xong**), AI **bắt buộc**:
+
+1. **Build lại** nếu đã sửa/tạo code (theo mục "Build và tự test trước khi báo xong" trên). Nếu build Fail do file bị lock bởi BCDT.Api: tắt process BCDT.Api (vd `Get-Process -Name "BCDT.Api" -ErrorAction SilentlyContinue | Stop-Process -Force`) rồi build lại. Chỉ khi build Pass (hoặc không áp dụng) mới tiếp tục.
+2. **Test cases:** Theo rule **bcdt-postman-test-cases** (xác định file đề xuất, tạo/cập nhật "Kiểm tra cho AI" hoặc *_TEST_CASES.md, chạy đủ bước).
+3. Mở file đề xuất và tìm mục **"Kiểm tra cho AI"** (hoặc đọc `docs/AI_TU_KIEM_TRA.md`).
+4. **Chạy đủ** các bước/case trong checklist (hoặc trong `*_TEST_CASES.md` tương ứng): build đã chạy ở bước 1, gọi API, query DB, MCP execute_sql nếu có. **Nếu task đụng FE:** bắt buộc chạy E2E: `npm run test:e2e` trong `src/bcdt-web` (BE tại 5080), báo Pass/Fail **từng file spec**; xem [docs/E2E_VERIFY.md](../../docs/E2E_VERIFY.md). Nếu không chạy E2E: theo checklist "Kiểm tra cho AI" / MCP browser và ghi rõ lý do. **Nếu có sửa FE:** mở DevTools (F12) → Console và Issues; đảm bảo **không còn error, không còn warning**; ghi trong báo cáo "DevTools Console: không error/warning" hoặc lỗi đã sửa.
+5. **Tạo/cập nhật Postman collection** nếu task liên quan API (theo rule **bcdt-postman-test-cases**; chạy xác thực JSON và báo Pass).
+6. **Chỉ sau khi** đã chạy và ghi nhận kết quả: **báo kết quả** cho user: liệt kê **từng bước/case** kèm **Pass** hoặc **Fail** (và lỗi nếu có). **Không skip bước nào** – yêu cầu test phải pass đủ tất cả các case trong checklist. Ví dụ: *"1. Build: Pass. 2. TC-01 Login: Pass. 3. TC-07 Login sai pass: Pass. …"*
+
+Nếu file đề xuất không có mục "Kiểm tra cho AI", chạy build (khi có sửa code) + gọi endpoint/query liên quan, **tạo checklist tối thiểu** cho lần sau nếu là tính năng mới, rồi báo ngắn gọn Pass/Fail. **Luôn test trước, báo sau.**

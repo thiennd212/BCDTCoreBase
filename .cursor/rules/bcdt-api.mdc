@@ -1,0 +1,75 @@
+---
+description: REST API conventions for BCDT
+globs: **/Controllers/**/*.cs
+alwaysApply: false
+---
+
+# REST API Design
+
+## Endpoints (mẫu + submission/template)
+```
+GET    /api/v1/forms                 # List (with paging)
+GET    /api/v1/forms/{id}            # Get one
+GET    /api/v1/forms/{id}/template   # Download Excel template (.xlsx). Query: fillBinding=true (IDataBindingResolver), organizationId?, reportingPeriodId?
+POST   /api/v1/forms                 # Create
+PUT    /api/v1/forms/{id}            # Full update
+DELETE /api/v1/forms/{id}            # Delete
+
+GET    /api/v1/submissions                    # List
+GET    /api/v1/submissions/{id}                # Get one
+POST   /api/v1/submissions                     # Create (409 nếu trùng Form+Org+Period)
+GET    /api/v1/submissions/{id}/presentation  # Get ReportPresentation (WorkbookJson, fileSize)
+POST   /api/v1/submissions/{id}/upload-excel  # Multipart form-data, file .xlsx/.xls
+```
+
+## Controller Pattern
+```csharp
+[ApiController]
+[Route("api/v1/[controller]")]
+[Authorize]
+public class FormsController : ControllerBase
+{
+    [HttpGet("{id}")]
+    [ProducesResponseType<ApiResponse<FormDto>>(200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> Get(int id)
+    {
+        var result = await _formService.GetAsync(id);
+        return result.ToActionResult();
+    }
+}
+```
+
+## Response Wrapper
+```csharp
+public class ApiResponse<T>
+{
+    public bool Success { get; set; }
+    public T? Data { get; set; }
+    public string? Message { get; set; }
+    public List<string>? Errors { get; set; }
+}
+```
+
+## Status Codes
+- 200: Success with data
+- 201: Created (with Location header)
+- 204: Success no content (DELETE)
+- 400: Validation error
+- 401/403: Auth errors
+- 404: Not found
+- 500: Server error (log, don't expose details)
+
+## List endpoint cho resource phân cấp (ParentId / TreePath / Level)
+
+Khi entity có quan hệ cha–con (Organization, Menu, ReferenceEntity, …):
+
+- **Query param `all`** (bool, optional): Khi `all=true` trả về **toàn bộ** bản ghi (flat), không filter theo parentId. Khi không truyền hoặc `all=false` giữ hành vi hiện tại (vd. parentId null = chỉ gốc).
+- **Ví dụ:** `GET /api/v1/organizations?all=true&includeInactive=true` → toàn bộ đơn vị (flat) để FE build cây.
+
+**Tài liệu:** [HIERARCHICAL_DATA_BASE_AND_RULE.md](docs/de_xuat_trien_khai/HIERARCHICAL_DATA_BASE_AND_RULE.md). **Rule FE:** bcdt-hierarchical-data.
+
+## Don't
+- Don't return 200 for errors
+- Don't put business logic in controllers
+- Don't expose stack traces
