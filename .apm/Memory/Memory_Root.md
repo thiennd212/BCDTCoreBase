@@ -65,3 +65,42 @@ Ghi entry vào [memory/DECISIONS.md](../../memory/DECISIONS.md) khi thay đổi 
 | Task 2.4 | Backend Unit Tests: BCDT.Tests project, 15 tests (FormDefinition, Submission, Auth) pass | ✅ Done | [Task_2_4_Backend_Unit_Tests.md](Phase_02_Sprint_1_Security_Quality/Task_2_4_Backend_Unit_Tests.md) |
 
 **Phase summary:** Sprint 1 hoàn thành toàn bộ. Điểm cần theo dõi: (1) `FormDefinitionService.GetByIdAsync` trả `Result.Ok(null)` thay vì NOT_FOUND – nên fix ở sprint sau; (2) CI cần push lên `main` để xác nhận green lần đầu; (3) E2E đầy đủ cần BE chạy tại port 5080.
+
+---
+
+## Phase 3 – Sprint 2: Nghiệp vụ & Business Gaps
+
+**Hoàn thành:** 2026-02-27 · **6/6 tasks** · Build pass
+
+| Task | Mô tả | Trạng thái |
+|------|--------|------------|
+| S2.4 FE | Nút Nhân bản form (Clone) trong FormsPage | ✅ Done |
+| S2.5 BE | UserDelegation BE API (Full/Partial, overlap check, soft-revoke) | ✅ Done |
+| Task 2.6 | GET /report-summaries/{id}/details – Drilldown API | ✅ Done |
+| Task 2.7 | GET /reporting-periods/{id}/export-summary – PeriodSummaryExport | ✅ Done |
+| Task 2.8 | Validation required row khi nộp báo cáo | ✅ Done |
+| Task 2.9 | POST /forms/{id}/clone – CloneAsync deep copy | ✅ Done |
+| CK-02 | Hangfire auto-create reporting period job (daily 1AM UTC) | ✅ Done |
+
+**Phase summary:** Toàn bộ business gaps Sprint 2 đã xử lý. Tests: 15 pass. Build clean. UserDelegation BE sẵn sàng; FE sẽ được bổ sung Sprint 4.
+
+---
+
+## Phase 4 – Sprint 3+4: UX Overhaul + Quality + Zero-Warning
+
+**Hoàn thành:** 2026-03-02 · **10/10 tasks** · Build 0 warnings 0 errors · 24 tests
+
+| Task | Mô tả | Trạng thái |
+|------|--------|------------|
+| S3.1 | FormConfigPage split: 2670 → 166 lines + 12 section components | ✅ Done |
+| S3.2 | SubmissionDataEntryPage UX: loading/error/boundary | ✅ Done |
+| S3.3 | Dashboard filter theo kỳ báo cáo + export CSV | ✅ Done |
+| S3.4 | Error handling UX: ErrorBoundary + ErrorPage | ✅ Done |
+| S3.5 | Loading & empty states: PageSkeleton + EmptyState | ✅ Done |
+| S4.1 | UserDelegations FE: trang quản lý ủy quyền tạm thời | ✅ Done |
+| S4.2 | FluentValidation cho CreateUserDelegationRequest | ✅ Done |
+| S4.3 | Seed menu Ủy quyền người dùng (script 29) | ✅ Done |
+| S4.4 | xUnit unit tests UserDelegationService (9 tests mới, tổng 24) | ✅ Done |
+| S4.5 | Zero-warning build: Directory.Build.props + CI -warnaserror + test step | ✅ Done |
+
+**Phase summary:** UX cải thiện đáng kể (FormConfig tách nhỏ, error handling, loading states). UserDelegation hoàn chỉnh BE+FE+Tests. CI pipeline robust: full solution build -warnaserror + dotnet test. Build: **0 warnings, 0 errors, 24 tests pass**.
