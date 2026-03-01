@@ -109,7 +109,7 @@ public class ColumnLayoutService : IColumnLayoutService
 
         // Sort: FormColumn items at same LayoutOrder come before PlaceholderOccurrence
         var merged = colByOrder
-            .Select(x => (x.order, isCol: true, colObj: x.col, occObj: (FormPlaceholderColumnOccurrence?)null, displayOrder: (x.col as FormColumn)!.DisplayOrder, id: (x.col as FormColumn)!.Id))
+            .Select(x => (x.order, isCol: true, colObj: (object?)x.col, occObj: (FormPlaceholderColumnOccurrence?)null, displayOrder: (x.col as FormColumn)!.DisplayOrder, id: (x.col as FormColumn)!.Id))
             .Concat(occByOrder
                 .Select(x => (x.order, isCol: false, colObj: (object?)null, occObj: x.occ, displayOrder: x.occ!.DisplayOrder, id: x.occ!.Id)))
             .OrderBy(x => x.order)

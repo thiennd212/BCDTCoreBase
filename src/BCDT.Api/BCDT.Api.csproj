@@ -21,8 +21,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- NU1603: Caching.Abstractions/Memory requested 8.0.1 but transitive deps resolve to 9.0.0; 9.x is API-compatible -->
-    <NoWarn>$(NoWarn);NU1603</NoWarn>
   </PropertyGroup>
 
 </Project>

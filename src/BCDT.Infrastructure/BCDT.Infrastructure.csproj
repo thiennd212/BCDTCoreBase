@@ -24,8 +24,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <!-- NU1603: Caching.Abstractions 8.0.1 not found, 9.0.0 resolved (transitive); API-compatible -->
-    <NoWarn>$(NoWarn);NU1603</NoWarn>
   </PropertyGroup>
 
 </Project>

@@ -99,7 +99,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Logout([FromBody] RefreshRequest request, CancellationToken cancellationToken)
     {
         var refreshToken = Request.Cookies[RefreshTokenCookieName] ?? request?.RefreshToken;
-        var logoutRequest = new RefreshRequest { RefreshToken = refreshToken };
+        var logoutRequest = new RefreshRequest { RefreshToken = refreshToken ?? string.Empty };
 
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
         var result = await _authService.LogoutAsync(logoutRequest, ip, cancellationToken);
