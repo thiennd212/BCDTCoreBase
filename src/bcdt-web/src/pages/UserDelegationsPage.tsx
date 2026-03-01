@@ -111,17 +111,17 @@ export function UserDelegationsPage() {
   const columns = [
     {
       title: 'Người ủy quyền',
-      dataIndex: 'fromUserId',
-      key: 'fromUserId',
+      key: 'fromUser',
       width: 180,
-      render: (v: number) => users.find((u) => u.id === v)?.fullName ?? v,
+      render: (_: unknown, record: UserDelegationDto) =>
+        record.fromUserName ?? users.find((u) => u.id === record.fromUserId)?.fullName ?? record.fromUserId,
     },
     {
       title: 'Người nhận',
-      dataIndex: 'toUserId',
-      key: 'toUserId',
+      key: 'toUser',
       width: 180,
-      render: (v: number) => users.find((u) => u.id === v)?.fullName ?? v,
+      render: (_: unknown, record: UserDelegationDto) =>
+        record.toUserName ?? users.find((u) => u.id === record.toUserId)?.fullName ?? record.toUserId,
     },
     {
       title: 'Loại',

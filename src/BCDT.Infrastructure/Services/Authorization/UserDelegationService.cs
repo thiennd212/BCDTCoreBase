@@ -25,7 +25,9 @@ public class UserDelegationService : IUserDelegationService
 
         var list = await query
             .OrderByDescending(d => d.CreatedAt)
-            .Select(d => MapToDto(d))
+            .Select(d => MapToDto(d,
+                _db.Users.Where(u => u.Id == d.FromUserId).Select(u => u.FullName).FirstOrDefault(),
+                _db.Users.Where(u => u.Id == d.ToUserId).Select(u => u.FullName).FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
         return Result.Ok(list);
@@ -37,7 +39,9 @@ public class UserDelegationService : IUserDelegationService
             .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
         if (entity == null)
             return Result.Fail<UserDelegationDto?>("NOT_FOUND", "Ủy quyền không tồn tại.");
-        return Result.Ok<UserDelegationDto?>(MapToDto(entity));
+        var fromName = await _db.Users.Where(u => u.Id == entity.FromUserId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+        var toName = await _db.Users.Where(u => u.Id == entity.ToUserId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+        return Result.Ok<UserDelegationDto?>(MapToDto(entity, fromName, toName));
     }
 
     public async Task<Result<UserDelegationDto>> CreateAsync(CreateUserDelegationRequest request, int createdBy, CancellationToken cancellationToken = default)
@@ -91,7 +95,9 @@ public class UserDelegationService : IUserDelegationService
 
         _db.UserDelegations.Add(entity);
         await _db.SaveChangesAsync(cancellationToken);
-        return Result.Ok(MapToDto(entity));
+        var fromName = await _db.Users.Where(u => u.Id == entity.FromUserId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+        var toName = await _db.Users.Where(u => u.Id == entity.ToUserId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+        return Result.Ok(MapToDto(entity, fromName, toName));
     }
 
     public async Task<Result<UserDelegationDto>> RevokeAsync(int id, RevokeUserDelegationRequest request, int revokedBy, CancellationToken cancellationToken = default)
@@ -107,14 +113,18 @@ public class UserDelegationService : IUserDelegationService
         entity.RevokedBy = revokedBy;
         entity.RevokedReason = request.RevokedReason;
         await _db.SaveChangesAsync(cancellationToken);
-        return Result.Ok(MapToDto(entity));
+        var fromName = await _db.Users.Where(u => u.Id == entity.FromUserId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+        var toName = await _db.Users.Where(u => u.Id == entity.ToUserId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken);
+        return Result.Ok(MapToDto(entity, fromName, toName));
     }
 
-    private static UserDelegationDto MapToDto(UserDelegation d) => new()
+    private static UserDelegationDto MapToDto(UserDelegation d, string? fromName = null, string? toName = null) => new()
     {
         Id = d.Id,
         FromUserId = d.FromUserId,
+        FromUserName = fromName,
         ToUserId = d.ToUserId,
+        ToUserName = toName,
         DelegationType = d.DelegationType,
         Permissions = d.Permissions,
         OrganizationId = d.OrganizationId,

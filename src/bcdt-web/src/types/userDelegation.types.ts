@@ -1,7 +1,9 @@
 export interface UserDelegationDto {
   id: number
   fromUserId: number
+  fromUserName?: string | null
   toUserId: number
+  toUserName?: string | null
   /** 'Full' | 'Partial' */
   delegationType: string
   /** JSON array permission codes (khi Partial) */
