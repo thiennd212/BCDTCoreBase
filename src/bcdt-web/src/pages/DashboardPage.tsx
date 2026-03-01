@@ -1,21 +1,73 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Card, Row, Col, Statistic, Table, Typography } from 'antd'
+import { Card, Row, Col, Statistic, Table, Typography, Select, Button, Space } from 'antd'
 import {
   FileTextOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons'
 import { dashboardApi } from '../api/dashboardApi'
+import { reportingPeriodsApi } from '../api/reportingPeriodsApi'
 import { EmptyState } from '../components/EmptyState'
+import type { DashboardAdminStatsDto } from '../types/dashboard.types'
 
 const { Title } = Typography
 
+/** Export thống kê admin ra file CSV (client-side). */
+function exportStatsCsv(stats: DashboardAdminStatsDto, periodLabel: string) {
+  const rows: string[][] = []
+
+  rows.push(['Thống kê báo cáo', periodLabel])
+  rows.push([])
+  rows.push(['Chỉ số', 'Số lượng'])
+  rows.push(['Tổng số', String(stats.totalSubmissions)])
+  rows.push(['Nháp', String(stats.draftCount)])
+  rows.push(['Đã gửi', String(stats.submittedCount)])
+  rows.push(['Đã duyệt', String(stats.approvedCount)])
+  rows.push(['Từ chối', String(stats.rejectedCount)])
+  rows.push(['Chỉnh sửa', String(stats.revisionCount)])
+
+  if (stats.submissionsByPeriod.length > 0) {
+    rows.push([])
+    rows.push(['Theo kỳ báo cáo', ''])
+    rows.push(['Kỳ', 'Số lượng'])
+    stats.submissionsByPeriod.forEach((p) => rows.push([p.periodName, String(p.count)]))
+  }
+
+  if (stats.submissionsByForm.length > 0) {
+    rows.push([])
+    rows.push(['Theo biểu mẫu', ''])
+    rows.push(['Biểu mẫu', 'Số lượng'])
+    stats.submissionsByForm.forEach((f) => rows.push([f.formName, String(f.count)]))
+  }
+
+  const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
+  const bom = '\uFEFF'
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `dashboard_stats_${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  URL.revokeObjectURL(url)
+  document.body.removeChild(a)
+}
+
 export function DashboardPage() {
+  const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(null)
+
+  const { data: periods = [] } = useQuery({
+    queryKey: ['reporting-periods', 'dashboard-filter'],
+    queryFn: () => reportingPeriodsApi.getList(),
+  })
+
   const { data: adminStats, isLoading: loadingAdmin } = useQuery({
-    queryKey: ['dashboard', 'admin-stats'],
-    queryFn: () => dashboardApi.getAdminStats(),
+    queryKey: ['dashboard', 'admin-stats', selectedPeriodId],
+    queryFn: () => dashboardApi.getAdminStats(selectedPeriodId),
   })
 
   const { data: userTasks, isLoading: loadingUser } = useQuery({
@@ -23,11 +75,35 @@ export function DashboardPage() {
     queryFn: () => dashboardApi.getUserTasks(),
   })
 
+  const periodOptions = periods.map((p) => ({ value: p.id, label: `${p.periodCode} – ${p.periodName}` }))
+  const selectedPeriodLabel = selectedPeriodId
+    ? (periods.find((p) => p.id === selectedPeriodId)?.periodName ?? '')
+    : 'Tất cả kỳ'
+
   return (
     <>
-      <Title level={2} style={{ marginTop: 0, marginBottom: 24 }}>
+      <Title level={2} style={{ marginTop: 0, marginBottom: 16 }}>
         Tổng quan
       </Title>
+
+      {/* Toolbar: filter kỳ + export */}
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Select
+          allowClear
+          placeholder="Lọc theo kỳ báo cáo"
+          style={{ minWidth: 240 }}
+          options={periodOptions}
+          value={selectedPeriodId ?? undefined}
+          onChange={(v) => setSelectedPeriodId(v ?? null)}
+        />
+        <Button
+          icon={<DownloadOutlined />}
+          disabled={!adminStats}
+          onClick={() => adminStats && exportStatsCsv(adminStats, selectedPeriodLabel)}
+        >
+          Xuất CSV
+        </Button>
+      </Space>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={12} lg={8}>
@@ -127,7 +203,13 @@ export function DashboardPage() {
                 columns={[
                   { title: 'Biểu mẫu', dataIndex: 'formName', key: 'formName', ellipsis: true },
                   { title: 'Đơn vị', dataIndex: 'organizationName', key: 'organizationName', ellipsis: true },
-                  { title: 'Bước', key: 'step', render: (_: unknown, r: { currentStep: number; totalSteps: number }) => `${r.currentStep}/${r.totalSteps}` },
+                  {
+                    title: 'Bước',
+                    key: 'step',
+                    width: 70,
+                    render: (_: unknown, r: { currentStep: number; totalSteps: number }) =>
+                      `${r.currentStep}/${r.totalSteps}`,
+                  },
                 ]}
                 pagination={false}
               />
