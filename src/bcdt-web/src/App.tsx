@@ -36,6 +36,7 @@ const ReferenceEntityTypesPage = React.lazy(() => import('./pages/ReferenceEntit
 const SystemConfigPage = React.lazy(() => import('./pages/SystemConfigPage').then(m => ({ default: m.SystemConfigPage })))
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const UserDelegationsPage = React.lazy(() => import('./pages/UserDelegationsPage').then(m => ({ default: m.UserDelegationsPage })))
 
 // Perf-14: staleTime 1 phút cho query ít đổi (reporting-frequencies, organization-types, forms list…) – giảm refetch không cần thiết
 const queryClient = new QueryClient({
@@ -82,6 +83,7 @@ function AppRoutes() {
         <Route path="system-config" element={<SystemConfigPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="user-delegations" element={<UserDelegationsPage />} />
         <Route path="403" element={<ErrorPage type="403" />} />
         <Route path="500" element={<ErrorPage type="500" />} />
         <Route path="*" element={<ErrorPage type="404" />} />
