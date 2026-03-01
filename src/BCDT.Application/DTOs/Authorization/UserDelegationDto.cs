@@ -4,7 +4,9 @@ public class UserDelegationDto
 {
     public int Id { get; set; }
     public int FromUserId { get; set; }
+    public string? FromUserName { get; set; }
     public int ToUserId { get; set; }
+    public string? ToUserName { get; set; }
     /// <summary>Full | Partial</summary>
     public string DelegationType { get; set; } = "Full";
     /// <summary>JSON array permission codes (chỉ khi Partial).</summary>
