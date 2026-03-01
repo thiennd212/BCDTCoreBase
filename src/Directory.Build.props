@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <!--
+      Tập trung cấu hình build cho toàn bộ projects trong src/.
+      NU1603: Microsoft.Extensions.Caching.Abstractions >= 8.0.1 được giải quyết thành 9.0.0
+              (API-compatible; xảy ra khi build với .NET 9 SDK nhưng target net8.0).
+    -->
+    <NoWarn>$(NoWarn);NU1603</NoWarn>
+
+    <!--
+      TreatWarningsAsErrors: mọi CS8xxx (nullable) và warning khác đều là lỗi.
+      Giữ build luôn sạch – regression bị bắt ngay.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

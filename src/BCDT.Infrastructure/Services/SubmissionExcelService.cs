@@ -97,7 +97,7 @@ public class SubmissionExcelService : ISubmissionExcelService
                         var cell = ws.Cell(cellAddr);
                         var value = GetCellValue(cell, col.DataType);
                         SubmissionExcelServiceHelper.SetDataRowValue(dataRow, mapping.TargetColumnName, col.DataType, value);
-                        rowDict[col.ExcelColumn] = value;
+                        rowDict[col.ExcelColumn!] = value;
                     }
 
                     dataRowsToInsert.Add(dataRow);

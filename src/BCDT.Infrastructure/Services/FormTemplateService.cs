@@ -76,7 +76,7 @@ public class FormTemplateService : IFormTemplateService
                 ws.Cell(addressHeader).Value = col.ColumnName;
 
                 if (col.Width.HasValue && col.Width.Value > 0)
-                    ws.Column(col.ExcelColumn).Width = Math.Min(col.Width.Value, 100);
+                    ws.Column(col.ExcelColumn!).Width = Math.Min(col.Width.Value, 100);
 
                 if (fillBinding)
                 {
