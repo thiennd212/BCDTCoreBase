@@ -283,7 +283,11 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ISubmissionPdfService, SubmissionPdfService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
-builder.Services.AddScoped<IEmailSender, MockEmailSender>();
+// Email: dùng SmtpEmailService khi SmtpHost được cấu hình, fallback MockEmailSender (log only)
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Email:SmtpHost"]))
+    builder.Services.AddScoped<IEmailSender, SmtpEmailService>();
+else
+    builder.Services.AddScoped<IEmailSender, MockEmailSender>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
@@ -291,6 +295,8 @@ builder.Services.AddScoped<ISystemConfigService, SystemConfigService>();
 builder.Services.AddScoped<IReferenceEntityTypeService, ReferenceEntityTypeService>();
 builder.Services.AddScoped<IReferenceEntityService, ReferenceEntityService>();
 builder.Services.AddScoped<BCDT.Infrastructure.Jobs.AggregateSubmissionJob>();
+builder.Services.AddScoped<BCDT.Infrastructure.Jobs.AutoCreateReportingPeriodJob>();
+builder.Services.AddScoped<BCDT.Infrastructure.Jobs.NotificationDispatchJob>();
 
 var app = builder.Build();
 
