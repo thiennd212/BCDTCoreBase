@@ -7,13 +7,18 @@ import {
   Typography,
   Button,
   message,
-  Spin,
   Table,
   Input,
   Space,
   Popconfirm,
+  Spin,
+  Alert,
 } from 'antd'
-import { DownloadOutlined, SyncOutlined, SaveOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { DownloadOutlined, SyncOutlined, SaveOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { PageSkeleton } from '../components/PageSkeleton'
+import { QueryErrorDisplay } from '../components/ErrorPage'
+import { ErrorBoundary } from '../components/ErrorBoundary'
+import { EmptyState } from '../components/EmptyState'
 import { Workbook, type WorkbookInstance } from '@fortune-sheet/react'
 import type { Sheet } from '@fortune-sheet/core'
 import '@fortune-sheet/react/dist/index.css'
@@ -92,16 +97,18 @@ export function SubmissionDataEntryPage() {
   const [workbookKey, setWorkbookKey] = useState(0)
   const sheetRef = useRef<WorkbookInstance | null>(null)
 
-  const { data: submission, isLoading: subLoading } = useQuery({
+  const { data: submission, isLoading: subLoading, isError: subError, error: subErr } = useQuery({
     queryKey: ['submission', id],
     queryFn: () => submissionsApi.getById(id),
     enabled: Number.isInteger(id),
+    retry: 1,
   })
 
-  const { data: sheets = [], isLoading: sheetsLoading } = useQuery({
+  const { data: sheets = [], isLoading: sheetsLoading, isError: sheetsError, error: sheetsErr } = useQuery({
     queryKey: ['forms', submission?.formDefinitionId, 'sheets'],
     queryFn: () => formSheetsApi.getList(submission!.formDefinitionId),
     enabled: submission != null,
+    retry: 1,
   })
 
   const { data: form } = useQuery({
@@ -374,62 +381,47 @@ export function SubmissionDataEntryPage() {
   }, [sheetData, submission])
 
   if (!Number.isInteger(id) || subLoading) {
-    return (
-      <Card>
-        <Spin />
-        <Text type="secondary" style={{ marginLeft: 12 }}>
-          Đang tải...
-        </Text>
-      </Card>
-    )
+    return <PageSkeleton title="Đang tải báo cáo..." rows={4} />
+  }
+  if (subError) {
+    return <QueryErrorDisplay error={subErr} />
   }
   if (!submission) {
-    return (
-      <Card>
-        <Text type="danger">Không tìm thấy báo cáo.</Text>
-        <Button type="link" onClick={() => navigate('/submissions')}>
-          Quay lại danh sách
-        </Button>
-      </Card>
-    )
+    return <QueryErrorDisplay error={{ status: 404 }} />
+  }
+  if (sheetsError) {
+    return <QueryErrorDisplay error={sheetsErr} />
   }
   if (submission.status !== 'Draft' && submission.status !== 'Revision') {
     return (
       <Card>
-        <Text type="secondary">
-          Chỉ báo cáo trạng thái Nháp hoặc Chỉnh sửa mới nhập liệu được. Trạng thái hiện tại: {submission.status}.
-        </Text>
-        <Button type="link" onClick={() => navigate('/submissions')}>
-          Quay lại
-        </Button>
+        <Alert
+          type="warning"
+          icon={<ExclamationCircleOutlined />}
+          showIcon
+          message="Không thể nhập liệu"
+          description={`Chỉ báo cáo trạng thái Nháp hoặc Chỉnh sửa mới nhập liệu được. Trạng thái hiện tại: ${submission.status}.`}
+          action={
+            <Button size="small" onClick={() => navigate('/submissions')}>
+              Quay lại
+            </Button>
+          }
+        />
       </Card>
     )
   }
 
-  const loading = sheetsLoading || colsLoading || (sheetData === null && presFetched)
-  if (loading && sheetData === null) {
-    return (
-      <Card>
-        <Spin />
-        <Text type="secondary" style={{ marginLeft: 12 }}>
-          Đang tải cấu trúc biểu mẫu...
-        </Text>
-      </Card>
-    )
+  const dataLoading = sheetsLoading || colsLoading || (sheetData === null && presFetched)
+  if (dataLoading && sheetData === null) {
+    return <PageSkeleton title="Đang tải cấu trúc biểu mẫu..." rows={3} />
   }
   if (presFetched && sheets.length === 0) {
     return (
-      <Card>
-        <Text type="secondary">
-          Biểu mẫu chưa có sheet/cột. Vào Cấu hình biểu mẫu để thêm hàng và cột, sau đó quay lại nhập liệu.
-        </Text>
-        <Button type="link" onClick={() => navigate(`/forms/${submission.formDefinitionId}/config`)}>
-          Mở cấu hình biểu mẫu
-        </Button>
-        <Button type="link" onClick={() => navigate('/submissions')}>
-          Quay lại báo cáo
-        </Button>
-      </Card>
+      <EmptyState
+        description="Biểu mẫu chưa có sheet/cột. Vào Cấu hình biểu mẫu để thêm hàng và cột, sau đó quay lại nhập liệu."
+        actionLabel="Mở cấu hình biểu mẫu"
+        onAction={() => navigate(`/forms/${submission.formDefinitionId}/config`)}
+      />
     )
   }
   const safeSheetData = sheetData ?? []
@@ -446,6 +438,11 @@ export function SubmissionDataEntryPage() {
           ]}
         />
         <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {putPresentationMutation.isError && (
+            <Text type="danger" style={{ fontSize: 12 }}>
+              <ExclamationCircleOutlined /> Lưu thất bại – thử lại
+            </Text>
+          )}
           <Button size="middle" icon={<DownloadOutlined />} onClick={handleDownloadXlsx}>
             Tải Excel (.xlsx)
           </Button>
@@ -527,29 +524,37 @@ export function SubmissionDataEntryPage() {
         <Text type="secondary" style={{ flexShrink: 0, display: 'block', marginBottom: 6, fontSize: 12 }}>
           Công thức, định dạng, khóa ô. Tải Excel (.xlsx) để mở không lỗi; Import trên toolbar. Chỉnh sửa xong bấm Lưu → Đồng bộ dữ liệu.
         </Text>
-        <div style={{ flex: 1, minHeight: 0, border: '1px solid #e8e8e8', borderRadius: 6, overflow: 'hidden' }}>
-          <FortuneExcelHelper
-            setKey={setWorkbookKey}
-            setSheets={setSheetData}
-            sheetRef={sheetRef}
-            config={{
-              import: { xlsx: true, csv: true },
-              export: { xlsx: false, csv: false },
-            }}
-          />
-          <Workbook
-            key={workbookKey}
-            ref={sheetRef}
-            data={safeSheetData}
-            onChange={setSheetData}
-            showFormulaBar={true}
-            showToolbar={true}
-            showSheetTabs={true}
-            allowEdit={true}
-            lang="vi"
-            customToolbarItems={[importToolBarItem()]}
-          />
-        </div>
+        {safeSheetData.length === 0 ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Spin tip="Đang tải bảng tính..." />
+          </div>
+        ) : (
+          <div style={{ flex: 1, minHeight: 0, border: '1px solid #e8e8e8', borderRadius: 6, overflow: 'hidden' }}>
+            <FortuneExcelHelper
+              setKey={setWorkbookKey}
+              setSheets={setSheetData}
+              sheetRef={sheetRef}
+              config={{
+                import: { xlsx: true, csv: true },
+                export: { xlsx: false, csv: false },
+              }}
+            />
+            <ErrorBoundary>
+              <Workbook
+                key={workbookKey}
+                ref={sheetRef}
+                data={safeSheetData}
+                onChange={setSheetData}
+                showFormulaBar={true}
+                showToolbar={true}
+                showSheetTabs={true}
+                allowEdit={true}
+                lang="vi"
+                customToolbarItems={[importToolBarItem()]}
+              />
+            </ErrorBoundary>
+          </div>
+        )}
       </Card>
     </div>
   )
