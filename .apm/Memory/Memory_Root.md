@@ -104,3 +104,18 @@ Ghi entry vào [memory/DECISIONS.md](../../memory/DECISIONS.md) khi thay đổi 
 | S4.5 | Zero-warning build: Directory.Build.props + CI -warnaserror + test step | ✅ Done |
 
 **Phase summary:** UX cải thiện đáng kể (FormConfig tách nhỏ, error handling, loading states). UserDelegation hoàn chỉnh BE+FE+Tests. CI pipeline robust: full solution build -warnaserror + dotnet test. Build: **0 warnings, 0 errors, 24 tests pass**.
+
+---
+
+## Phase 5 – Sprint 5: Notification Module + UX Improvements
+
+**Hoàn thành:** 2026-03-02 · **4/4 tasks** · Build 0 warnings 0 errors · 24 tests · TypeScript 0 errors
+
+| Task | Mô tả | Trạng thái |
+|------|--------|------------|
+| S5.3 | UserDelegation UX: FromUserName/ToUserName từ BE (JOIN Users), FE dùng tên | ✅ Done |
+| S5.1 | Notification BE: MailKit 4.9.0, SmtpEmailService, NotificationDispatchJob (Hangfire), triggers Workflow+Delegation | ✅ Done |
+| S5.2 | Notification FE: AppLayout bell badge + unread count poll 30s | ✅ Done |
+| S5.4 | E2E tests UserDelegationsPage (4 test cases) | ✅ Done |
+
+**Phase summary:** Notification module hoàn chỉnh – BE có email delivery thật (MailKit, fallback Mock), Hangfire fire-and-forget dispatch, trigger tích hợp vào Workflow (Approve/Reject/Revision) và Delegation (create/revoke). FE có bell badge real-time unread count. UserDelegation UX hiển thị tên đúng. PR #3 (sprint/5→main) đã tạo. TONG_HOP v2.79.
