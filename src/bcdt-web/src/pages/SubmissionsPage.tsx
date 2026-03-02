@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -24,10 +24,11 @@ import {
   CheckOutlined,
   CloseOutlined,
   EditOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons'
 import { getApiErrorMessage } from '../api/apiClient'
 import { submissionsApi } from '../api/submissionsApi'
-import { workflowInstancesApi } from '../api/workflowInstancesApi'
+import { workflowInstancesApi, type BulkApproveResultDto } from '../api/workflowInstancesApi'
 import { formsApi } from '../api/formsApi'
 import { organizationsApi } from '../api/organizationsApi'
 import { reportingPeriodsApi } from '../api/reportingPeriodsApi'
@@ -60,6 +61,9 @@ export function SubmissionsPage() {
   const [workflowAction, setWorkflowAction] = useState<'approve' | 'reject' | 'revision' | null>(null)
   const [workflowInstanceId, setWorkflowInstanceId] = useState<number | null>(null)
   const [workflowComments, setWorkflowComments] = useState('')
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [bulkModalOpen, setBulkModalOpen] = useState(false)
+  const [bulkComments, setBulkComments] = useState('')
   const formContainerRef = useRef<HTMLDivElement>(null)
   useFocusFirstInModal(modalOpen, formContainerRef)
   useScrollPageTopWhenModalOpen(modalOpen)
@@ -148,6 +152,23 @@ export function SubmissionsPage() {
     onError: (err) => message.error(getApiErrorMessage(err) || 'Yêu cầu chỉnh sửa thất bại'),
   })
 
+  const bulkApproveMutation = useMutation({
+    mutationFn: ({ wfIds, comments }: { wfIds: number[]; comments?: string }) =>
+      workflowInstancesApi.bulkApprove({ workflowInstanceIds: wfIds, comments }),
+    onSuccess: (data: BulkApproveResultDto) => {
+      if (data.failed.length === 0) {
+        message.success(`Đã duyệt ${data.succeededIds.length} báo cáo`)
+      } else {
+        message.warning(`Duyệt ${data.succeededIds.length} thành công, ${data.failed.length} thất bại`)
+      }
+      queryClient.invalidateQueries({ queryKey: ['submissions'] })
+      setBulkModalOpen(false)
+      setBulkComments('')
+      setSelectedRowKeys([])
+    },
+    onError: (err) => message.error(getApiErrorMessage(err) || 'Duyệt hàng loạt thất bại'),
+  })
+
   const [selectedFormIdForVersion, setSelectedFormIdForVersion] = useState<number | null>(null)
   const { data: formVersions = [] } = useQuery({
     queryKey: ['form-versions', selectedFormIdForVersion],
@@ -205,6 +226,26 @@ export function SubmissionsPage() {
     if (workflowAction === 'approve') approveMutation.mutate({ id: workflowInstanceId, comments: workflowComments })
     else if (workflowAction === 'reject') rejectMutation.mutate({ id: workflowInstanceId, comments: workflowComments })
     else revisionMutation.mutate({ id: workflowInstanceId, comments: workflowComments })
+  }
+
+  const handleBulkApprove = () => {
+    const selectedSubmissions = submissions.filter((s) => selectedRowKeys.includes(s.id) && s.status === 'Submitted')
+    const wfIds = selectedSubmissions.map((s) => s.workflowInstanceId).filter((id): id is number => id != null)
+    if (wfIds.length === 0) {
+      message.warning('Không có báo cáo đã gửi duyệt nào được chọn')
+      return
+    }
+    setBulkModalOpen(true)
+  }
+
+  const selectedSubmitted = submissions.filter((s) => selectedRowKeys.includes(s.id) && s.status === 'Submitted')
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (keys: React.Key[]) => setSelectedRowKeys(keys),
+    getCheckboxProps: (record: ReportSubmissionDto) => ({
+      disabled: record.status !== 'Submitted',
+    }),
   }
 
   const formOptions = forms.map((f) => ({ value: f.id, label: `${f.code} - ${f.name}` }))
@@ -339,9 +380,19 @@ export function SubmissionsPage() {
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
             Tạo báo cáo
           </Button>
+          {selectedSubmitted.length > 0 && (
+            <Button
+              type="primary"
+              icon={<CheckCircleOutlined />}
+              onClick={handleBulkApprove}
+            >
+              Duyệt hàng loạt ({selectedSubmitted.length})
+            </Button>
+          )}
         </Space>
         <Table
           rowKey="id"
+          rowSelection={rowSelection}
           columns={columns}
           dataSource={submissions}
           loading={isLoading}
@@ -389,6 +440,30 @@ export function SubmissionsPage() {
             </Form.Item>
           </Form>
         </div>
+      </Modal>
+
+      <Modal
+        title={`Duyệt hàng loạt ${selectedSubmitted.length} báo cáo`}
+        open={bulkModalOpen}
+        onOk={() => {
+          const wfIds = selectedSubmitted.map((s) => s.workflowInstanceId).filter((id): id is number => id != null)
+          bulkApproveMutation.mutate({ wfIds, comments: bulkComments || undefined })
+        }}
+        onCancel={() => { setBulkModalOpen(false); setBulkComments('') }}
+        okText="Duyệt tất cả"
+        cancelText="Hủy"
+        confirmLoading={bulkApproveMutation.isPending}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Nhận xét (tùy chọn)">
+            <Input.TextArea
+              rows={3}
+              value={bulkComments}
+              onChange={(e) => setBulkComments(e.target.value)}
+              placeholder="Nhập nhận xét nếu cần"
+            />
+          </Form.Item>
+        </Form>
       </Modal>
 
       <Modal
