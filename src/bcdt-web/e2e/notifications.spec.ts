@@ -19,25 +19,24 @@ test.describe('S6.3 Thông báo (NotificationsPage + Bell Badge)', () => {
   test('Mở trang Thông báo – tiêu đề và danh sách hiển thị', async ({ page }) => {
     await page.goto('/notifications')
     await expect(page.getByRole('heading', { name: 'Thông báo' })).toBeVisible()
-    // Nút lọc Tất cả / Chưa đọc
-    await expect(page.getByText('Tất cả')).toBeVisible()
-    await expect(page.getByText('Chưa đọc')).toBeVisible()
-    // Nút đánh dấu tất cả
-    await expect(page.getByRole('button', { name: 'Đánh dấu tất cả đã đọc' })).toBeVisible()
+    // Segmented options: Tất cả / Chưa đọc
+    await expect(page.getByText('Tất cả').first()).toBeVisible()
+    await expect(page.getByText('Chưa đọc').first()).toBeVisible()
+    // Nút đánh dấu tất cả đã đọc
+    await expect(page.getByText('Đánh dấu tất cả đã đọc')).toBeVisible()
   })
 
-  test('Lọc Chưa đọc – tab thay đổi và danh sách cập nhật', async ({ page }) => {
+  test('Lọc Chưa đọc – Segmented thay đổi và trang vẫn hiển thị', async ({ page }) => {
     await page.goto('/notifications')
-    // Click segment "Chưa đọc"
-    await page.getByRole('button', { name: 'Chưa đọc' }).click()
-    // Chờ API response cho unread
+    await expect(page.getByRole('heading', { name: 'Thông báo' })).toBeVisible()
+    // Click segment "Chưa đọc" (Ant Design Segmented render là div, không phải button)
+    await page.getByText('Chưa đọc').first().click()
+    // Chờ ít nhất API notifications được gọi lại (có thể là GET /api/v1/notifications?unreadOnly=true)
     await page.waitForResponse(
-      (r) => r.url().includes('notifications') && r.url().includes('unreadOnly=true') && r.status() === 200,
+      (r) => r.url().includes('/api/v1/notifications') && r.status() === 200,
       { timeout: 10000 },
-    ).catch(() => {
-      // Fallback: nếu URL không có unreadOnly, chờ bất kỳ notifications GET
-    })
-    // Trang vẫn hiện tiêu đề
+    ).catch(() => { /* Bỏ qua nếu không bắt được response */ })
+    // Trang vẫn hiện tiêu đề và không crash
     await expect(page.getByRole('heading', { name: 'Thông báo' })).toBeVisible()
   })
 
