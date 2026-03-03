@@ -4,7 +4,6 @@ import { DeleteOutlined } from '@ant-design/icons'
 import { formWorkflowConfigApi, workflowDefinitionsApi } from '../../api/workflowDefinitionsApi'
 import type { FormWorkflowConfigDto } from '../../types/workflow.types'
 import { getApiErrorMessage } from '../../api/apiClient'
-import { ACTIONS_COLUMN_WIDTH_ICON } from '../../constants/tableActions'
 import { TableActions } from '../TableActions'
 
 interface Props {

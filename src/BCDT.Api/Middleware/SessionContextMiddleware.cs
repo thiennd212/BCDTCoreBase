@@ -69,11 +69,13 @@ public class SessionContextMiddleware
         {
             try
             {
-                await ClearUserContextOnConnection(connection, context.RequestAborted);
+                // Dùng CancellationToken.None vì context.RequestAborted đã bị cancel
+                // khi request kết thúc → OperationCanceledException → stale connection trong pool
+                await ClearUserContextOnConnection(connection, CancellationToken.None);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best effort clear
+                _logger.LogWarning(ex, "ClearUserContext failed – connection may have stale session context");
             }
         }
     }

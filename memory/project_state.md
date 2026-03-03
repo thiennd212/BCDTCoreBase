@@ -2,36 +2,48 @@
 
 Trạng thái hiện tại cho planning và orchestration. Cập nhật khi sprint/blocker/thay đổi quan trọng.
 
-**Cập nhật:** 2026-03-02
+**Cập nhật:** 2026-03-03
 
 ---
 
 ## Active sprint goal
 
-- **Sprint hiện tại:** **Sprint 5** – Notification module (Hangfire + MailKit) + UX improvements
-- **Mục tiêu:** Triển khai hệ thống thông báo in-app + email đầy đủ; cải thiện UX UserDelegation; bổ sung E2E coverage
-- **Kế hoạch chi tiết:** `.apm/Memory/Sprint_5_Plan.md`
-- **Decisions đã approved:** D-0003 (Notification no RLS), D-0004 (MailKit), D-0005 (Period trigger cả hai)
-- **Nền tảng:** Build 0 warnings · 24 tests · Sprint 1–4 ✅
+- **Sprint hiện tại:** **Sprint 7 ✅ HOÀN THÀNH** – Load Test CCU tăng dần (Pre-Go-Live)
+- **Kết quả:** S7.1 E2E 24/24 pass ✅ | S7.2 k6 P0/P1 pass ✅ | S7.3 P2→P4 CCU + bottleneck ⚠️ | S7.4 Soak FAIL (accumulated stress) ❌ | S7.5 Fortune Sheet perf ✅
+- **Kế hoạch chi tiết:** `.apm/Memory/Sprint_7_Plan.md`
+- **Nền tảng:** Build 0W/0E · **33 tests** · Sprint 1–7 ✅ · Prod checklist 15/15 ✅
+
+### CCU Summary (localhost dev)
+| Phase | CCU | Error | p95 | Verdict |
+|-------|-----|-------|-----|---------|
+| P0 | 1 | 0% | 2.29s | ✅ |
+| P1 | 10 | 0% | 45ms | ✅ |
+| P2 | 50 | 0% | 65ms | ⚠️ p99=9.4s (BCrypt) |
+| P3 | 100 | 0.84% | 790ms | ⚠️ p99=8s (BCrypt) |
+| P4 | 200 | 0.11% | 3.2s | ❌ p95 vượt SLA 7% |
+| P5/P6 | 500/1000 | N/A | N/A | ⚠️ MUST-ASK |
+| P7 Soak | 100, 60m | 0.04% | 47.67s | ❌ Accumulated stress |
+
+### Next sprint proposal: Sprint 8
+- Fix `sp_ClearUserContext` (silent exception → stale connections) – HIGH
+- Re-run P7 Soak in fresh environment
+- P5 Stress (500 VU) sau khi fix sp_ClearUserContext
+- Merge PRs: sprint/3→6 vào main
 
 ---
 
 ## Current blockers
 
-- **Không có blocker kỹ thuật.** Sprint 5 có thể bắt đầu ngay.
-- **PRs cần tạo thủ công:** `sprint/3` → `main` và `sprint/4` → `main` qua GitHub UI (gh CLI không available).
+- **PRs cần merge thủ công:** `sprint/3` → `main`, `sprint/4` → `main`, `sprint/5` → `main`, `sprint/6` → `main`
+- **P7 Soak cần chạy lại** trong fresh environment (BE restart, không accumulated load) sau khi fix `sp_ClearUserContext`
+- **P5/P6** (500/1000 VU): MUST-ASK trước khi chạy; cần staging environment riêng
 
 ---
 
 ## Modules under heavy modification
 
-- **Sprint 5 – đang chuẩn bị:** Notification module (mới hoàn toàn), UserDelegation (UX fix nhỏ), E2E (user-delegations).
-- **Vùng sẽ chạm Sprint 5:**
-  - **Hangfire:** NotificationDispatchJob (job mới, phải gọi sp_SetSystemContext(0))
-  - **WorkflowService/ReportingPeriodService/UserDelegationService:** thêm trigger gọi NotificationService
-  - **AppDbContext:** thêm DbSet&lt;Notification&gt;
-  - **FE AppLayout.tsx:** thêm bell badge icon
-- **Khi có task mới:** Module dễ bị sửa nhiều theo TONG_HOP / AI_PROJECT_SNAPSHOT: **Form & Submission (B12, P8)** — FormConfig, SubmissionDataEntry, workbook-data, BuildWorkbookFromSubmissionService, SyncFromPresentationService.
+- **Sprint 7 hoàn thành:** k6 scripts, Fortune Sheet perf fix, TypeScript fixes, SQL pool fix
+- **Fragile areas (không chạm trừ khi cần):** BuildWorkbookFromSubmissionService, SyncFromPresentationService, Fortune Sheet adapter, SessionContextMiddleware
 
 ---
 

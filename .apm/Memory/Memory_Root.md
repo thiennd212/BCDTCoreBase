@@ -119,3 +119,33 @@ Ghi entry vào [memory/DECISIONS.md](../../memory/DECISIONS.md) khi thay đổi 
 | S5.4 | E2E tests UserDelegationsPage (4 test cases) | ✅ Done |
 
 **Phase summary:** Notification module hoàn chỉnh – BE có email delivery thật (MailKit, fallback Mock), Hangfire fire-and-forget dispatch, trigger tích hợp vào Workflow (Approve/Reject/Revision) và Delegation (create/revoke). FE có bell badge real-time unread count. UserDelegation UX hiển thị tên đúng. PR #3 (sprint/5→main) đã tạo. TONG_HOP v2.79.
+
+---
+
+## Phase 6 – Sprint 6: Bulk Approve + Tests + E2E Notifications
+
+**Hoàn thành:** 2026-03-02 · **3/3 tasks** · Build 0W/0E · **33 tests** · TypeScript 0 errors
+
+| Task | Mô tả | Trạng thái |
+|------|--------|------------|
+| S6.1 | Bulk Approve FE: rowSelection SubmissionsPage, `bulkApprove()` API, confirm modal | ✅ Done |
+| S6.2 | Unit tests WorkflowExecutionService: 9 test cases (Submit/Approve/Reject) – tổng 33 tests | ✅ Done |
+| S6.3 | E2E NotificationsPage: 3 test cases (page open, filter unread, bell badge) | ✅ Done |
+
+**Phase summary:** Bulk approve hoàn chỉnh BE+FE. Test coverage tăng 24→33 (WorkflowExecution service). E2E mở rộng lên 5 spec / 24 tests. Build green. sprint/6 đã push remote.
+
+---
+
+## Phase 7 – Sprint 7: Load Test CCU Pre-Go-Live
+
+**Hoàn thành:** 2026-03-03 · **5/5 tasks** · Build 0W/0E · **33 tests** · TypeScript 0 errors
+
+| Task | Mô tả | Trạng thái |
+|------|--------|------------|
+| S7.1 | E2E verify sau Sprint 6: sửa UserDelegationsPage JSX + notifications.spec selector → 24/24 pass | ✅ Done |
+| S7.2 | k6 setup P0+P1: Rate Limiter fix (PermitLimit 200→10000); P0 ✅ p95=2.29s; P1 ✅ p95=45ms | ✅ Done |
+| S7.3 | CCU P2→P4: SQL MaxPoolSize 100→500 fix; P2 ✅; P3 ⚠️ p99=8s; P4 ❌ p95=3.2s (7% over SLA) | ⚠️ Partial |
+| S7.4 | P7 Soak (100 VU, 60m): FAIL – accumulated stress; sp_ClearUserContext stale connections | ❌ Needs rerun |
+| S7.5 | Fortune Sheet perf: onChange removed (re-render storm); manualChunks 4218kB→305kB (93% smaller) | ✅ Done |
+
+**Phase summary:** CCU capacity xác nhận: 100 CCU ổn định, 200 CCU borderline (p95=3.2s), 500+ cần horizontal scaling. Bottleneck chính: BCrypt burst (startup artifact), sp_ClearUserContext silent fail (stale pool connections – HIGH production risk). Fortune Sheet bundle giảm 93% qua vendor chunk split. Docs: `docs/load-test/W17_LOAD_TEST_CCU.md`. TONG_HOP v2.81. **Sprint 8 cần:** fix sp_ClearUserContext, re-run P7, P5 Stress (MUST-ASK).

@@ -15,4 +15,18 @@ export default defineConfig({
       '/api': { target: 'http://localhost:5080', changeOrigin: true },
     },
   },
+  build: {
+    // Perf-15: tách Fortune Sheet thành vendor chunk riêng để cache hiệu quả
+    // Fortune Sheet ~4.2MB là inherent cost của Excel-like editor, cần isolate để user
+    // không phải re-download khi code app thay đổi
+    chunkSizeWarningLimit: 5000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-fortune': ['@fortune-sheet/react', '@fortune-sheet/core'],
+          'vendor-fortune-excel': ['@corbe30/fortune-excel'],
+        },
+      },
+    },
+  },
 })

@@ -261,7 +261,8 @@ export function UserDelegationsPage() {
                 getFieldValue('delegationType') === 'Partial' ? (
                   <Form.Item
                     name="permissions"
-                    label="Quyền ủy quyền (JSON array, VD: [\"Form.Edit\"])"
+                    label={'Quyền ủy quyền (JSON array, VD: ["Form.Edit"])'}
+
                     rules={[{ required: true, message: 'Nhập danh sách quyền' }]}
                   >
                     <Input.TextArea rows={2} placeholder='["Form.Edit","Submission.Submit"]' />
