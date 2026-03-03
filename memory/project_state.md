@@ -8,12 +8,17 @@ Trạng thái hiện tại cho planning và orchestration. Cập nhật khi spri
 
 ## Active sprint goal
 
-- **Sprint hiện tại:** **Sprint 7 ✅ HOÀN THÀNH** – Load Test CCU tăng dần (Pre-Go-Live)
-- **Kết quả:** S7.1 E2E 24/24 pass ✅ | S7.2 k6 P0/P1 pass ✅ | S7.3 P2→P4 CCU + bottleneck ⚠️ | S7.4 Soak FAIL (accumulated stress) ❌ | S7.5 Fortune Sheet perf ✅
-- **Kế hoạch chi tiết:** `.apm/Memory/Sprint_7_Plan.md`
-- **Nền tảng:** Build 0W/0E · **33 tests** · Sprint 1–7 ✅ · Prod checklist 15/15 ✅
+- **Sprint hiện tại:** **Sprint 8 ✅ HOÀN THÀNH** – Stabilize Production: SessionContext Fix + CCU Breaking Point
+- **Kết quả:**
+  - S8.1 ✅ SessionContextMiddleware `CancellationToken.None` – stale pool fixed. D-0006.
+  - S8.2 ❌ P7 Soak Lần 2: avg↓11% med↓25%, p95=44.82s vẫn FAIL – dev machine CPU limit
+  - S8.3 ✅ Merge 4 PRs sprint/3→6 vào main – main branch đầy đủ Sprint 1–8
+  - S8.4 ⚠️ P5 Ramp (Phương án C) done: breaking point ~250 VU; Phương án B (staging) chờ provision
+  - S8.5 🔵 FormRow Phase 3 – optional, chờ business confirm
+- **Kế hoạch chi tiết:** `.apm/Memory/Sprint_8_Plan.md`
+- **Nền tảng:** Build 0W/0E · **33 tests** · Sprint 1–8 ✅ · Prod checklist 15/15 ✅
 
-### CCU Summary (localhost dev)
+### CCU Summary (localhost dev, Sprint 7–8)
 | Phase | CCU | Error | p95 | Verdict |
 |-------|-----|-------|-----|---------|
 | P0 | 1 | 0% | 2.29s | ✅ |
@@ -21,22 +26,25 @@ Trạng thái hiện tại cho planning và orchestration. Cập nhật khi spri
 | P2 | 50 | 0% | 65ms | ⚠️ p99=9.4s (BCrypt) |
 | P3 | 100 | 0.84% | 790ms | ⚠️ p99=8s (BCrypt) |
 | P4 | 200 | 0.11% | 3.2s | ❌ p95 vượt SLA 7% |
-| P5/P6 | 500/1000 | N/A | N/A | ⚠️ MUST-ASK |
-| P7 Soak | 100, 60m | 0.04% | 47.67s | ❌ Accumulated stress |
+| **P5-200** | 200 | 0.00% | **2.01s** | ⚠️ p95 pass, p99=9s |
+| **P5-300** | 300 | 0.22% | **8.12s** | ❌ **Breaking point dev** |
+| **P5-500** | 500 | 0.54% | **14.71s** | ❌ Severe, graceful |
+| P7 Soak L1 | 100, 60m | 0.04% | 47.67s | ❌ Accumulated stress |
+| P7 Soak L2 | 100, 60m | 0.15% | 44.82s | ❌ Dev limit (S8.1 ↓11%) |
 
-### Next sprint proposal: Sprint 8
-- Fix `sp_ClearUserContext` (silent exception → stale connections) – HIGH
-- Re-run P7 Soak in fresh environment
-- P5 Stress (500 VU) sau khi fix sp_ClearUserContext
-- Merge PRs: sprint/3→6 vào main
+**Breaking point dev machine (i5-10210U):** ~250 VU. Hệ thống không crash ở 500 VU (graceful degradation).
+
+### Next sprint: Sprint 9
+- Close Sprint 8 docs (done via apm.pm)
+- S8.4 Phương án B khi staging ready
+- P7 Soak on staging khi staging ready
+- Sprint 9 focus: TBD – go-live prep / new features / FormRow Phase 3
 
 ---
 
 ## Current blockers
 
-- **PRs cần merge thủ công:** `sprint/3` → `main`, `sprint/4` → `main`, `sprint/5` → `main`, `sprint/6` → `main`
-- **P7 Soak cần chạy lại** trong fresh environment (BE restart, không accumulated load) sau khi fix `sp_ClearUserContext`
-- **P5/P6** (500/1000 VU): MUST-ASK trước khi chạy; cần staging environment riêng
+- **S8.4 Phương án B + P7 Soak staging**: Cần User provision staging server (8 core, 16GB) per `docs/load-test/STAGING_SETUP.md`
 
 ---
 

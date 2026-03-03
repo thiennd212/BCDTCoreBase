@@ -149,3 +149,19 @@ Ghi entry vào [memory/DECISIONS.md](../../memory/DECISIONS.md) khi thay đổi 
 | S7.5 | Fortune Sheet perf: onChange removed (re-render storm); manualChunks 4218kB→305kB (93% smaller) | ✅ Done |
 
 **Phase summary:** CCU capacity xác nhận: 100 CCU ổn định, 200 CCU borderline (p95=3.2s), 500+ cần horizontal scaling. Bottleneck chính: BCrypt burst (startup artifact), sp_ClearUserContext silent fail (stale pool connections – HIGH production risk). Fortune Sheet bundle giảm 93% qua vendor chunk split. Docs: `docs/load-test/W17_LOAD_TEST_CCU.md`. TONG_HOP v2.81. **Sprint 8 cần:** fix sp_ClearUserContext, re-run P7, P5 Stress (MUST-ASK).
+
+---
+
+## Phase 8 – Sprint 8: Stabilize Production + CCU Breaking Point
+
+**Hoàn thành:** 2026-03-03 · **4/5 tasks** (S8.5 optional) · Build 0W/0E · **33 tests**
+
+| Task | Mô tả | Trạng thái |
+|------|--------|------------|
+| S8.1 | SessionContextMiddleware: `context.RequestAborted` → `CancellationToken.None`; LogWarning thay silent catch. D-0006. Build 0W/0E, 33/33 pass | ✅ Done |
+| S8.2 | P7 Soak Lần 2 (fresh, S8.1 fix): avg↓11% med↓25%, p95=44.82s FAIL. Root cause: dev machine CPU limit | ❌ Dev limit |
+| S8.3 | Merge 4 PRs sprint/3→6 → main. Fix squash merge conflicts (--ours). Main = Sprint 1–8 đầy đủ | ✅ Done |
+| S8.4 | P5 Ramp Phương án C: 200 VU p95=2.01s ✅ / 300 VU p95=8.12s ❌ (breaking point) / 500 VU p95=14.71s error=0.54% graceful. Phương án B (staging) chờ provision | ⚠️ C done, B pending |
+| S8.5 | FormRow Phase 3 – hàng từ danh mục chỉ tiêu | 🔵 Optional |
+
+**Phase summary:** S8.1 fix production-critical bug (stale session context) với root cause không ngờ: `context.RequestAborted` đã cancel khi HTTP response gửi → `sp_ClearUserContext` never ran trên bất kỳ request nào → pool degradation dưới load. P5 Ramp C xác nhận breaking point ~250 VU trên dev machine (i5-10210U) – hệ thống graceful, không crash ở 500 VU. S8.3 merge hoàn tất git history. Process improvement: AI_WORK_PROTOCOL §0.1 + §2.1.1 – Task Proposal Format bắt buộc cho M/L/MUST-ASK. TONG_HOP v2.85. **Còn lại:** S8.4B + P7 Soak staging (blocked external).
