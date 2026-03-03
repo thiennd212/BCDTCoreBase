@@ -101,7 +101,7 @@ public class SyncFromPresentationService : ISyncFromPresentationService
                     {
                         var mapping = mappingByColumnId[col.Id];
                         object? value = null;
-                        if (rowEl.TryGetProperty(col.ExcelColumn, out var cellProp))
+                        if (rowEl.TryGetProperty(col.ExcelColumn!, out var cellProp))
                             value = GetJsonElementValue(cellProp, col.DataType);
                         SubmissionExcelServiceHelper.SetDataRowValue(dataRow, mapping.TargetColumnName, col.DataType, value);
                     }

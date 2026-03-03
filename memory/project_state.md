@@ -2,34 +2,35 @@
 
 Trạng thái hiện tại cho planning và orchestration. Cập nhật khi sprint/blocker/thay đổi quan trọng.
 
-**Cập nhật:** 2026-02-26
+**Cập nhật:** 2026-03-02
 
 ---
 
 ## Active sprint goal
 
-- **Mục tiêu hiện tại:** Theo dõi **triển khai production cả nước (Prod)** — đảm bảo checklist R1–R15 (Prod-1..Prod-15) đã triển khai và tài liệu RUNBOOK mục 10 sẵn sàng cho deploy thật.
-- **Trạng thái:** Prod-1 → Prod-15 đã đánh dấu xong trong TONG_HOP (2026-02-25–26). Không có sprint formal; ưu tiên 1 theo TONG_HOP 3.1 là “theo dõi” và rà lại RUNBOOK 10 / REVIEW_PRODUCTION_CA_NUOC khi chuẩn bị go-live.
-- **Nguồn:** TONG_HOP 3.1, 3.9; [REVIEW_PRODUCTION_CA_NUOC.md](../docs/REVIEW_PRODUCTION_CA_NUOC.md).
+- **Sprint hiện tại:** **Sprint 5** – Notification module (Hangfire + MailKit) + UX improvements
+- **Mục tiêu:** Triển khai hệ thống thông báo in-app + email đầy đủ; cải thiện UX UserDelegation; bổ sung E2E coverage
+- **Kế hoạch chi tiết:** `.apm/Memory/Sprint_5_Plan.md`
+- **Decisions đã approved:** D-0003 (Notification no RLS), D-0004 (MailKit), D-0005 (Period trigger cả hai)
+- **Nền tảng:** Build 0 warnings · 24 tests · Sprint 1–4 ✅
 
 ---
 
 ## Current blockers
 
-- **Không có blocker cấp bách** được ghi trong tài liệu.
-- **Rủi ro có thể cản trở production hoặc task tiếp:**
-  - **CI/CD:** Không có pipeline tại repo root → không có gate tự động (build/test) trước merge hoặc deploy.
-  - **Backend unit/integration tests:** Không có *Tests*.csproj → thay đổi BE dễ gây regression; phụ thuộc E2E + Postman + UAT thủ công.
-  - **Secrets và môi trường Prod:** Phụ thuộc việc cấu hình đúng biến môi trường (RUNBOOK 10.1); sai cấu hình = blocker khi deploy.
+- **Không có blocker kỹ thuật.** Sprint 5 có thể bắt đầu ngay.
+- **PRs cần tạo thủ công:** `sprint/3` → `main` và `sprint/4` → `main` qua GitHub UI (gh CLI không available).
 
 ---
 
 ## Modules under heavy modification
 
-- **Hiện tại:** Không có module đang được sửa đổi nặng (MVP 17 tuần đã xong; Prod-1..15 đã xong).
-- **Vùng vừa chạm gần đây (Prod-11→15):**
-  - **Middleware:** SessionContextMiddleware (503 khi SetUserContext fail), RequestTraceMiddleware (X-Request-Id, TraceId), Rate limiter (AddRateLimiter).
-  - **Auth/API:** Login logging; RUNBOOK 10.2/10.3 (timeout, checklist), 10.5 (dữ liệu trong nước).
+- **Sprint 5 – đang chuẩn bị:** Notification module (mới hoàn toàn), UserDelegation (UX fix nhỏ), E2E (user-delegations).
+- **Vùng sẽ chạm Sprint 5:**
+  - **Hangfire:** NotificationDispatchJob (job mới, phải gọi sp_SetSystemContext(0))
+  - **WorkflowService/ReportingPeriodService/UserDelegationService:** thêm trigger gọi NotificationService
+  - **AppDbContext:** thêm DbSet&lt;Notification&gt;
+  - **FE AppLayout.tsx:** thêm bell badge icon
 - **Khi có task mới:** Module dễ bị sửa nhiều theo TONG_HOP / AI_PROJECT_SNAPSHOT: **Form & Submission (B12, P8)** — FormConfig, SubmissionDataEntry, workbook-data, BuildWorkbookFromSubmissionService, SyncFromPresentationService.
 
 ---

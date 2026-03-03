@@ -166,7 +166,7 @@ public class BuildWorkbookFromSubmissionService : IBuildWorkbookFromSubmissionSe
                 .ToList();
             var emptyRow = new Dictionary<string, object?>();
             foreach (var col in colsWithMapping)
-                emptyRow[col.ExcelColumn] = null;
+                emptyRow[col.ExcelColumn!] = null;
 
             var sheetDataRows = dataRows.Where(r => r.SheetIndex == formSheet.SheetIndex).ToList();
             var rows = new List<Dictionary<string, object?>>();
@@ -179,7 +179,7 @@ public class BuildWorkbookFromSubmissionService : IBuildWorkbookFromSubmissionSe
                     {
                         var mapping = mappingByColumnId[col.Id];
                         var raw = SubmissionExcelServiceHelper.GetDataRowValue(dataRow, mapping.TargetColumnName);
-                        row[col.ExcelColumn] = ToJsonFriendly(raw);
+                        row[col.ExcelColumn!] = ToJsonFriendly(raw);
                     }
                     rows.Add(row);
                 }
@@ -349,7 +349,7 @@ public class BuildWorkbookFromSubmissionService : IBuildWorkbookFromSubmissionSe
         var ordered = OrderColumnsByTree(sheetColumns, null);
         return ordered.Select(c => new WorkbookColumnHeaderDto
         {
-            ExcelColumn = c.ExcelColumn,
+            ExcelColumn = c.ExcelColumn!,
             ColumnName = c.ColumnName,
             Colspan = leafCountById.TryGetValue(c.Id, out var n) ? n : 1,
             ParentId = c.ParentId,

@@ -22,8 +22,11 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build src/BCDT.Api/BCDT.Api.csproj --no-restore --configuration Release
+      - name: Build (full solution, zero-warning)
+        run: dotnet build BCDTCoreBase.sln --no-restore --configuration Release -warnaserror
+
+      - name: Test
+        run: dotnet test src/BCDT.Tests/BCDT.Tests.csproj --no-build --configuration Release --logger "console;verbosity=minimal"
 
   build-frontend:
     name: Build Frontend
