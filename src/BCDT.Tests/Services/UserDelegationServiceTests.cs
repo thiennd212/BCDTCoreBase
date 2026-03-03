@@ -1,9 +1,12 @@
 using BCDT.Application.DTOs.Authorization;
+using BCDT.Application.Services.Notification;
 using BCDT.Domain.Entities.Authentication;
 using BCDT.Domain.Entities.Authorization;
 using BCDT.Infrastructure.Persistence;
 using BCDT.Infrastructure.Services.Authorization;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Xunit;
 
 namespace BCDT.Tests.Services;
@@ -16,6 +19,13 @@ public class UserDelegationServiceTests
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         return new AppDbContext(options);
+    }
+
+    private static UserDelegationService CreateSut(AppDbContext db)
+    {
+        var notificationService = new Mock<INotificationService>();
+        var backgroundJobs = new Mock<IBackgroundJobClient>();
+        return new UserDelegationService(db, notificationService.Object, backgroundJobs.Object);
     }
 
     private static User MakeUser(int id, string username = "user") => new()
@@ -42,7 +52,7 @@ public class UserDelegationServiceTests
     public async Task CreateAsync_SelfDelegation_ReturnsValidationFailed()
     {
         await using var db = CreateContext();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         var req = ValidRequest(fromId: 1, toId: 1);
         var result = await sut.CreateAsync(req, createdBy: 99);
@@ -55,7 +65,7 @@ public class UserDelegationServiceTests
     public async Task CreateAsync_ValidToBeforeValidFrom_ReturnsValidationFailed()
     {
         await using var db = CreateContext();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         var req = ValidRequest();
         req.ValidTo = req.ValidFrom.AddHours(-1);
@@ -72,7 +82,7 @@ public class UserDelegationServiceTests
         db.Users.Add(MakeUser(1, "from"));
         db.Users.Add(MakeUser(2, "to"));
         await db.SaveChangesAsync();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         var req = ValidRequest();
         req.DelegationType = "Partial";
@@ -89,7 +99,7 @@ public class UserDelegationServiceTests
         await using var db = CreateContext();
         db.Users.Add(MakeUser(2, "to")); // chỉ có toUser, không có fromUser
         await db.SaveChangesAsync();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         var result = await sut.CreateAsync(ValidRequest(fromId: 1, toId: 2), createdBy: 99);
 
@@ -111,7 +121,7 @@ public class UserDelegationServiceTests
         };
         db.UserDelegations.Add(existing);
         await db.SaveChangesAsync();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         // Tạo lần 2 với cùng khoảng thời gian overlap
         var result = await sut.CreateAsync(ValidRequest(1, 2), createdBy: 99);
@@ -127,7 +137,7 @@ public class UserDelegationServiceTests
         db.Users.Add(MakeUser(1, "from"));
         db.Users.Add(MakeUser(2, "to"));
         await db.SaveChangesAsync();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         var result = await sut.CreateAsync(ValidRequest(1, 2), createdBy: 99);
 
@@ -145,7 +155,7 @@ public class UserDelegationServiceTests
     public async Task RevokeAsync_NotFound_ReturnsNotFound()
     {
         await using var db = CreateContext();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         var result = await sut.RevokeAsync(999, new RevokeUserDelegationRequest(), revokedBy: 99);
 
@@ -165,7 +175,7 @@ public class UserDelegationServiceTests
         };
         db.UserDelegations.Add(entity);
         await db.SaveChangesAsync();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         var result = await sut.RevokeAsync(entity.Id, new RevokeUserDelegationRequest(), revokedBy: 99);
 
@@ -185,7 +195,7 @@ public class UserDelegationServiceTests
         };
         db.UserDelegations.Add(entity);
         await db.SaveChangesAsync();
-        var sut = new UserDelegationService(db);
+        var sut = CreateSut(db);
 
         var result = await sut.RevokeAsync(entity.Id, new RevokeUserDelegationRequest { RevokedReason = "Test" }, revokedBy: 77);
 

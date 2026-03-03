@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom'
-import { Layout, Menu, Button, Typography, Space, Drawer, Dropdown, Avatar, Modal, Radio } from 'antd'
+import { Layout, Menu, Button, Typography, Space, Drawer, Dropdown, Avatar, Modal, Radio, Badge, Tooltip } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   MenuOutlined,
@@ -30,6 +30,7 @@ import { useAuth } from '../context/AuthContext'
 import { useIsMobile } from '../hooks/useBreakpoint'
 import { menusApi } from '../api/menusApi'
 import { authApi } from '../api/authApi'
+import { notificationsApi } from '../api/notificationsApi'
 import type { MenuDto } from '../types/menu.types'
 import type { UserRoleItemDto } from '../types/auth.types'
 
@@ -100,6 +101,14 @@ export function AppLayout() {
   const [openKeys, setOpenKeys] = useState<string[]>([])
   const [switchRoleModalOpen, setSwitchRoleModalOpen] = useState(false)
   const [selectedRoleIndex, setSelectedRoleIndex] = useState<number | null>(null)
+
+  // Poll unread notification count mỗi 30s
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notifications-count'],
+    queryFn: notificationsApi.getUnreadCount,
+    refetchInterval: 30 * 1000,
+    staleTime: 25 * 1000,
+  })
 
   // Fetch menus theo vai trò hiện tại (BE lọc theo RoleMenu)
   const { data: menus = [] } = useQuery({
@@ -258,6 +267,17 @@ export function AppLayout() {
             </Text>
           </Link>
         </Space>
+        <Space>
+          <Tooltip title="Thông báo">
+            <Badge count={unreadCount} size="small" overflowCount={99}>
+              <Button
+                type="text"
+                icon={<BellOutlined style={{ fontSize: 18 }} />}
+                onClick={() => navigate('/notifications')}
+                aria-label="Thông báo"
+              />
+            </Badge>
+          </Tooltip>
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={['click']}>
           <Button type="text" style={{ height: 'auto', padding: '4px 8px' }}>
             <Space wrap={false}>
@@ -275,6 +295,7 @@ export function AppLayout() {
             </Space>
           </Button>
         </Dropdown>
+        </Space>
       </Header>
 
       <Layout>

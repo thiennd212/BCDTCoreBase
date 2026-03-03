@@ -1,9 +1,13 @@
 using BCDT.Application.Common;
+using BCDT.Application.DTOs.Notification;
 using BCDT.Application.DTOs.Workflow;
+using BCDT.Application.Services.Notification;
 using BCDT.Application.Services.Workflow;
 using BCDT.Domain.Entities.Data;
 using BCDT.Domain.Entities.Workflow;
+using BCDT.Infrastructure.Jobs;
 using BCDT.Infrastructure.Persistence;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 
 namespace BCDT.Infrastructure.Services.Workflow;
@@ -12,11 +16,19 @@ public class WorkflowExecutionService : IWorkflowExecutionService
 {
     private readonly AppDbContext _db;
     private readonly IFormWorkflowConfigService _configService;
+    private readonly INotificationService _notificationService;
+    private readonly IBackgroundJobClient _backgroundJobs;
 
-    public WorkflowExecutionService(AppDbContext db, IFormWorkflowConfigService configService)
+    public WorkflowExecutionService(
+        AppDbContext db,
+        IFormWorkflowConfigService configService,
+        INotificationService notificationService,
+        IBackgroundJobClient backgroundJobs)
     {
         _db = db;
         _configService = configService;
+        _notificationService = notificationService;
+        _backgroundJobs = backgroundJobs;
     }
 
     public async Task<Result<WorkflowInstanceDto>> SubmitSubmissionAsync(long submissionId, int submittedBy, CancellationToken cancellationToken = default)
@@ -80,6 +92,7 @@ public class WorkflowExecutionService : IWorkflowExecutionService
             ApprovedAt = DateTime.UtcNow
         });
 
+        int? submitterId = null;
         if (instance.CurrentStep >= def.TotalSteps)
         {
             instance.Status = "Approved";
@@ -87,6 +100,7 @@ public class WorkflowExecutionService : IWorkflowExecutionService
             var sub = await _db.ReportSubmissions.FirstOrDefaultAsync(s => s.Id == instance.SubmissionId, cancellationToken);
             if (sub != null)
             {
+                submitterId = sub.SubmittedBy;
                 sub.Status = "Approved";
                 sub.ApprovedAt = DateTime.UtcNow;
                 sub.ApprovedBy = approverId;
@@ -106,6 +120,12 @@ public class WorkflowExecutionService : IWorkflowExecutionService
             }
         }
         await _db.SaveChangesAsync(cancellationToken);
+
+        // Thông báo cho người nộp khi được duyệt hoàn toàn
+        if (submitterId.HasValue)
+            await NotifySubmitterAsync(submitterId.Value, "Submission", instance.SubmissionId.ToString(),
+                "Submission đã được duyệt", $"Submission #{instance.SubmissionId} đã được phê duyệt.", cancellationToken);
+
         return Result.Ok(await MapInstanceToDtoAsync(instance.Id, cancellationToken));
     }
 
@@ -146,14 +166,21 @@ public class WorkflowExecutionService : IWorkflowExecutionService
         instance.Status = "Rejected";
         instance.CompletedAt = DateTime.UtcNow;
 
+        int? rejectedSubmitterId = null;
         var sub = await _db.ReportSubmissions.FirstOrDefaultAsync(s => s.Id == instance.SubmissionId, cancellationToken);
         if (sub != null)
         {
+            rejectedSubmitterId = sub.SubmittedBy;
             sub.Status = "Rejected";
             sub.UpdatedAt = DateTime.UtcNow;
             sub.UpdatedBy = approverId;
         }
         await _db.SaveChangesAsync(cancellationToken);
+
+        if (rejectedSubmitterId.HasValue)
+            await NotifySubmitterAsync(rejectedSubmitterId.Value, "Submission", instance.SubmissionId.ToString(),
+                "Submission bị từ chối", $"Submission #{instance.SubmissionId} đã bị từ chối. Lý do: {request?.Comments ?? "Không có."}", cancellationToken);
+
         return Result.Ok(await MapInstanceToDtoAsync(instance.Id, cancellationToken));
     }
 
@@ -175,14 +202,21 @@ public class WorkflowExecutionService : IWorkflowExecutionService
             ApprovedAt = DateTime.UtcNow
         });
 
+        int? revisionSubmitterId = null;
         var sub = await _db.ReportSubmissions.FirstOrDefaultAsync(s => s.Id == instance.SubmissionId, cancellationToken);
         if (sub != null)
         {
+            revisionSubmitterId = sub.SubmittedBy;
             sub.Status = "Revision";
             sub.UpdatedAt = DateTime.UtcNow;
             sub.UpdatedBy = approverId;
         }
         await _db.SaveChangesAsync(cancellationToken);
+
+        if (revisionSubmitterId.HasValue)
+            await NotifySubmitterAsync(revisionSubmitterId.Value, "Submission", instance.SubmissionId.ToString(),
+                "Yêu cầu chỉnh sửa submission", $"Submission #{instance.SubmissionId} cần được chỉnh sửa. Ghi chú: {request?.Comments ?? "Không có."}", cancellationToken);
+
         return Result.Ok(await MapInstanceToDtoAsync(instance.Id, cancellationToken));
     }
 
@@ -218,6 +252,36 @@ public class WorkflowExecutionService : IWorkflowExecutionService
             })
             .ToListAsync(cancellationToken);
         return Result.Ok(list);
+    }
+
+    private async Task NotifySubmitterAsync(int userId, string entityType, string entityId, string title, string message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notificationService.CreateAsync(new CreateNotificationRequest
+            {
+                UserId = userId,
+                Type = "Approval",
+                Title = title,
+                Message = message,
+                Priority = "Normal",
+                EntityType = entityType,
+                EntityId = entityId,
+                Channels = "InApp"
+            }, cancellationToken);
+
+            var userEmail = await _db.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(userEmail))
+                _backgroundJobs.Enqueue<NotificationDispatchJob>(j => j.ExecuteAsync(userEmail, title, message, CancellationToken.None));
+        }
+        catch (Exception)
+        {
+            // Notification failure không được làm gián đoạn workflow chính
+        }
     }
 
     private async Task<int?> GetOrganizationTypeIdAsync(int organizationId, CancellationToken cancellationToken)
