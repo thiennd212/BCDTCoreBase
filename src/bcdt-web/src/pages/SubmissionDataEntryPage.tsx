@@ -355,18 +355,20 @@ export function SubmissionDataEntryPage() {
   }, [dynamicRowsByRegion, putDynamicIndicatorsMutation])
 
   const handleSave = useCallback(() => {
-    if (!sheetData || sheetData.length === 0) return
-    const workbookJson = JSON.stringify(sheetData)
+    // Đọc trực tiếp từ sheetRef để tránh phụ thuộc vào sheetData (reactive state)
+    const currentSheets = sheetRef.current?.getAllSheets?.() ?? sheetData ?? []
+    if (currentSheets.length === 0) return
+    const workbookJson = JSON.stringify(currentSheets)
     sha256Hex(workbookJson).then((workbookHash) => {
       const fileSize = new TextEncoder().encode(workbookJson).length
       putPresentationMutation.mutate({
         workbookJson,
         workbookHash,
         fileSize,
-        sheetCount: sheetData.length,
+        sheetCount: currentSheets.length,
       })
     })
-  }, [sheetData, putPresentationMutation])
+  }, [sheetData, putPresentationMutation, sheetRef])
 
   /** Tải Excel (.xlsx) chuẩn – dùng SheetJS, mở bằng Excel không báo lỗi repair. */
   const handleDownloadXlsx = useCallback(() => {
@@ -381,7 +383,7 @@ export function SubmissionDataEntryPage() {
   }, [sheetData, submission])
 
   if (!Number.isInteger(id) || subLoading) {
-    return <PageSkeleton title="Đang tải báo cáo..." rows={4} />
+    return <PageSkeleton cardTitle="Đang tải báo cáo..." rows={4} />
   }
   if (subError) {
     return <QueryErrorDisplay error={subErr} />
@@ -413,7 +415,7 @@ export function SubmissionDataEntryPage() {
 
   const dataLoading = sheetsLoading || colsLoading || (sheetData === null && presFetched)
   if (dataLoading && sheetData === null) {
-    return <PageSkeleton title="Đang tải cấu trúc biểu mẫu..." rows={3} />
+    return <PageSkeleton cardTitle="Đang tải cấu trúc biểu mẫu..." rows={3} />
   }
   if (presFetched && sheets.length === 0) {
     return (
@@ -544,7 +546,6 @@ export function SubmissionDataEntryPage() {
                 key={workbookKey}
                 ref={sheetRef}
                 data={safeSheetData}
-                onChange={setSheetData}
                 showFormulaBar={true}
                 showToolbar={true}
                 showSheetTabs={true}
