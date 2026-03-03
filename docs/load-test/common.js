@@ -3,7 +3,7 @@
  * k6 v1.6+
  */
 
-export const BASE_URL = 'http://localhost:5080'
+export const BASE_URL = __ENV.BASE_URL || 'http://localhost:5080'
 
 export const THRESHOLDS = {
   // P95 < 3000ms (MVP SLA)
