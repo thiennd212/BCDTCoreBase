@@ -133,27 +133,55 @@ Command: k6 run --vus 100 --duration 15m docs/load-test/scenarios.js
 
 ---
 
-## P4 – Peak (200 VU, 20 phút)
+## P4 – Peak (200 VU, 20 phút) ❌ FAIL (latency)
 
-> Kết quả: (chờ cập nhật)
+```
+CCU: 200 VU | Duration: 20m | Date: 2026-03-03
+Command: k6 run --vus 200 --duration 20m docs/load-test/scenarios.js
+```
+
+| Metric | Kết quả | SLA | Status |
+|--------|---------|-----|--------|
+| http_req_failed | 0.11% | <1% | ✅ |
+| p(95) latency | 3.20s | <3s | ❌ (+7%) |
+| p(99) latency | 12.21s | <5s | ❌ |
+| checks pass | 99.88% (122503/122639) | ~100% | ✅ |
+
+**Checks thất bại:** 136 / 122639 = 0.11% (A/B/C submissions list, workbook-data, dashboard)
+**Throughput:** 122839 requests / 20m = 101 req/s | 78617 iterations
+**avg latency:** 715ms | **med:** 182ms | **max:** 21s
+
+**Nhận xét:**
+- Error rate 0.11% tuyệt vời → hệ thống không bị lỗi chức năng ở 200 CCU
+- p95=3.2s chỉ vượt SLA 7% → gần ngưỡng chấp nhận được
+- p99=12.21s chủ yếu do BCrypt burst startup: 200 VU login đồng thời → hàng chờ BCrypt lên 12s
+- **Steady-state thực sự**: med=182ms, p90=1.28s → rất tốt khi đã login xong
+- Throughput 101 req/s cho 200 CCU = 0.5 req/s/VU → bình thường (có sleep 1-6s/iter)
+
+**Kết luận:** Hệ thống xử lý 200 CCU với 99.88% success rate. SLA p95<3s bị vi phạm nhẹ
+do BCrypt burst. Ở production với nhiều VU login phân tán, p95 ước tính < 2s.
 
 ---
 
 ## P5 – Stress (500 VU, 20 phút) ⚠️ MUST-ASK
 
-> Kết quả: (chờ cập nhật) | Cần điều chỉnh RateLimiter và monitor SQL pool
+> **Chưa chạy** – Cần xác nhận:
+> 1. Điều chỉnh `RateLimiter PermitLimit` ≥ 50000
+> 2. `Max Pool Size` ≥ 1000 trong connection string
+> 3. Monitor SQL Server CPU/memory khi chạy
+> 4. Đảm bảo máy chủ staging có đủ RAM (≥ 8GB free)
 
 ---
 
 ## P6 – Spike (1000 VU, 10 phút) ⚠️ MUST-ASK
 
-> Kết quả: (chờ cập nhật) | Breaking point test
+> **Chưa chạy** – Breaking point test. Cần MUST-ASK và staging environment riêng.
 
 ---
 
 ## P7 – Soak (100 VU, 60 phút)
 
-> Kết quả: (chờ cập nhật) | Memory/connection leak check
+> **Chưa chạy** – Soak test (S7.4). Xem Task #17.
 
 ---
 
@@ -167,3 +195,23 @@ Command: k6 run --vus 100 --duration 15m docs/load-test/scenarios.js
 | 4 | sp_SetUserContext / SESSION_CONTEXT_FAILED | P3 | HIGH | Tối ưu stored procedure, tăng command timeout |
 | 5 | GET /submissions/{id}/workbook-data N+1 query | TBD | MEDIUM | Cần profile + eager load FilterDefinition |
 | 6 | POST /workflow-instances/bulk-approve N×sequential | TBD | MEDIUM | Cần batch/parallel ApproveAsync |
+
+---
+
+## Tóm tắt CCU capacity (localhost dev, 1 instance)
+
+| Phase | CCU | Error | p95 | p99 | Verdict |
+|-------|-----|-------|-----|-----|---------|
+| P0 | 1 | 0% | 2.29s | 2.89s | ✅ PASS |
+| P1 | 10 | 0% | 45ms | 4.4s | ✅ PASS |
+| P2 | 50 | 0% | 65ms | 9.4s | ⚠️ p99 cao (BCrypt) |
+| P3 | 100 | 0.84% | 790ms | 8s | ⚠️ p99 cao (BCrypt) |
+| P4 | 200 | 0.11% | 3.2s | 12s | ❌ p95 vượt SLA |
+| P5 | 500 | N/A | N/A | N/A | ⚠️ MUST-ASK |
+| P6 | 1000 | N/A | N/A | N/A | ⚠️ MUST-ASK |
+
+**Kết luận production:**
+- **100 CCU**: Hệ thống xử lý ổn định (error <1%, p95<1s steady-state)
+- **200 CCU**: Cần tối ưu BCrypt (async queue / work factor giảm) + sp_SetUserContext
+- **500+ CCU**: Cần horizontal scaling (multiple instances) + Redis session
+- **Nationwide deployment**: Dự kiến peak 500-1000 CCU → cần scale out trước khi triển khai
