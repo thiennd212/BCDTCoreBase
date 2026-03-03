@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<Menu> Menus => Set<Menu>();
     public DbSet<RoleMenu> RoleMenus => Set<RoleMenu>();
+    public DbSet<UserDelegation> UserDelegations => Set<UserDelegation>();
     public DbSet<OrganizationType> OrganizationTypes => Set<OrganizationType>();
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<UserOrganization> UserOrganizations => Set<UserOrganization>();
@@ -81,6 +82,7 @@ public class AppDbContext : DbContext
             e.ToTable("BCDT_RefreshToken");
             e.HasKey(x => x.Id);
             e.Property(x => x.Token).HasMaxLength(500);
+            e.Property(x => x.ReplacedByToken).HasMaxLength(500);
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
         });
 
@@ -99,6 +101,19 @@ public class AppDbContext : DbContext
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId);
             e.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId);
             e.HasOne<Organization>().WithMany().HasForeignKey(x => x.OrganizationId).IsRequired(false);
+        });
+
+        modelBuilder.Entity<UserDelegation>(e =>
+        {
+            e.ToTable("BCDT_UserDelegation");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DelegationType).HasMaxLength(20);
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.RevokedReason).HasMaxLength(500);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.FromUserId);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ToUserId);
+            e.HasOne<Organization>().WithMany().HasForeignKey(x => x.OrganizationId).IsRequired(false);
+            e.HasIndex(x => new { x.ToUserId, x.IsActive });
         });
 
         modelBuilder.Entity<Permission>(e =>

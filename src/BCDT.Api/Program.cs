@@ -33,6 +33,10 @@ using BCDT.Infrastructure.Services.ReportingPeriod;
 using BCDT.Infrastructure.Services.Workflow;
 using BCDT.Infrastructure.Services.Role;
 using BCDT.Infrastructure.Services.Permission;
+using BCDT.Application.Common.Authorization;
+using BCDT.Infrastructure.Authorization;
+using BCDT.Application.Services.Authorization;
+using BCDT.Infrastructure.Services.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +49,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
+using BCDT.Infrastructure.Jobs;
 
 // One-off: sinh BCrypt hash cho mật khẩu (dotnet run -- hash-password "Admin@123")
 if (args.Length >= 2 && args[0] == "hash-password")
@@ -183,6 +188,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, PermissionAuthorizationHandler>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("FormStructureAdmin", policy =>
@@ -193,6 +199,12 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("SYSTEM_ADMIN"));
     options.AddPolicy("AdminManageOrg", policy =>
         policy.RequireRole("SYSTEM_ADMIN"));
+    options.AddPolicy("Form.View", policy =>
+        policy.Requirements.Add(new PermissionRequirement("Form.View")));
+    options.AddPolicy("Form.Edit", policy =>
+        policy.Requirements.Add(new PermissionRequirement("Form.Edit")));
+    options.AddPolicy("Submission.Submit", policy =>
+        policy.Requirements.Add(new PermissionRequirement("Submission.Submit")));
 });
 
 // Prod-13 (R7): Rate limiting theo IP / user để chống abuse
@@ -231,6 +243,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserDelegationService, UserDelegationService>();
 builder.Services.AddScoped<IFormDefinitionService, FormDefinitionService>();
 builder.Services.AddScoped<IFormSheetService, FormSheetService>();
 builder.Services.AddScoped<IFormColumnService, FormColumnService>();
@@ -265,6 +278,7 @@ builder.Services.AddScoped<IWorkflowExecutionService, WorkflowExecutionService>(
 builder.Services.AddScoped<IReportingFrequencyService, ReportingFrequencyService>();
 builder.Services.AddScoped<IReportingPeriodService, ReportingPeriodService>();
 builder.Services.AddScoped<IAggregationService, AggregationService>();
+builder.Services.AddScoped<IReportSummaryService, ReportSummaryService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ISubmissionPdfService, SubmissionPdfService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -301,7 +315,17 @@ app.MapControllers();
 // Dashboard chỉ map khi ServerEnabled (instance chạy job); instance khác vẫn enqueue được nhưng không có /hangfire
 var hangfirePath = builder.Configuration["Hangfire:DashboardPath"] ?? "/hangfire";
 if (hangfireServerEnabled)
+{
     app.MapHangfireDashboard(hangfirePath);
+
+    // CK-02: Recurring job tự động tạo kỳ báo cáo – chạy hàng ngày lúc 1:00 AM UTC
+    var recurringJobs = app.Services.GetRequiredService<IRecurringJobManager>();
+    recurringJobs.AddOrUpdate<AutoCreateReportingPeriodJob>(
+        "auto-create-reporting-period",
+        job => job.ExecuteAsync(CancellationToken.None),
+        "0 1 * * *",    // daily at 01:00 UTC
+        new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+}
 
 app.MapGet("/", () => Results.Redirect("/health"));
 app.MapHealthChecks("/health");

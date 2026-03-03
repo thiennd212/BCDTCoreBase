@@ -87,6 +87,23 @@ public class AuthService : IAuthService
         if (!user.IsActive || user.IsDeleted)
             return Result.Fail<RefreshResponse>("UNAUTHORIZED", "Tài khoản không còn hoạt động.");
 
+        // Refresh token rotation: revoke old, issue new
+        var newRefreshTokenValue = _jwtService.GenerateRefreshToken();
+        var expiresAt = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays);
+
+        entity.RevokedAt = DateTime.UtcNow;
+        entity.ReplacedByToken = newRefreshTokenValue;
+
+        var newRefreshToken = new RefreshToken
+        {
+            UserId = user.Id,
+            Token = newRefreshTokenValue,
+            ExpiresAt = expiresAt,
+            CreatedByIp = null
+        };
+        _db.RefreshTokens.Add(newRefreshToken);
+        await _db.SaveChangesAsync(cancellationToken);
+
         var roleCodes = await GetUserRoleCodesAsync(user.Id, cancellationToken);
         var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Username, roleCodes);
         var expiresInSeconds = _jwtOptions.ExpiryMinutes * 60;
@@ -95,6 +112,7 @@ public class AuthService : IAuthService
         {
             AccessToken = accessToken,
             ExpiresIn = expiresInSeconds,
+            RefreshToken = newRefreshTokenValue,
             User = new UserInfoDto { Id = user.Id, Username = user.Username, Email = user.Email, FullName = user.FullName, IsActive = user.IsActive }
         });
     }

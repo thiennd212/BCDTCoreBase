@@ -22,12 +22,13 @@ public class DashboardController : ControllerBase
         _currentUserService = currentUserService;
     }
 
+    /// <summary>Thống kê admin. Query: periodId (tùy chọn, lọc theo kỳ báo cáo).</summary>
     [HttpGet("admin/stats")]
     [ProducesResponseType(typeof(ApiSuccessResponse<DashboardAdminStatsDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAdminStats(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetAdminStats([FromQuery] int? periodId = null, CancellationToken cancellationToken = default)
     {
         var userId = _currentUserService.GetUserId();
-        var result = await _service.GetAdminStatsAsync(userId, cancellationToken);
+        var result = await _service.GetAdminStatsAsync(userId, periodId, cancellationToken);
         if (!result.IsSuccess)
             return BadRequest(new ApiErrorResponse(result.Code, result.Message));
         return Ok(new ApiSuccessResponse<DashboardAdminStatsDto>(result.Data!));

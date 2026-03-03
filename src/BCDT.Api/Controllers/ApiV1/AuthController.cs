@@ -4,6 +4,7 @@ using BCDT.Application.DTOs.Auth;
 using BCDT.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace BCDT.Api.Controllers.ApiV1;
 
@@ -12,6 +13,8 @@ namespace BCDT.Api.Controllers.ApiV1;
 [Produces("application/json")]
 public class AuthController : ControllerBase
 {
+    private const string RefreshTokenCookieName = "bc_refresh_token";
+
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
 
@@ -20,6 +23,16 @@ public class AuthController : ControllerBase
         _authService = authService;
         _logger = logger;
     }
+
+    private static CookieOptions BuildRefreshCookieOptions(DateTimeOffset expires) =>
+        new()
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/api/v1/auth",
+            Expires = expires
+        };
 
     /// <summary>Đăng nhập: trả access_token, refresh_token và thông tin user.</summary>
     [HttpPost("login")]
@@ -35,8 +48,18 @@ public class AuthController : ControllerBase
             _logger.LogWarning("Login failed for user {Username}, code {Code}", request?.Username ?? "(null)", result.Code);
             return Unauthorized(new ApiErrorResponse(result.Code, result.Message));
         }
-        _logger.LogInformation("Login success userId {UserId}", result.Data!.User.Id);
-        return Ok(new ApiSuccessResponse<LoginResponse>(result.Data!));
+
+        var loginData = result.Data!;
+        if (!string.IsNullOrEmpty(loginData.RefreshToken))
+        {
+            Response.Cookies.Append(
+                RefreshTokenCookieName,
+                loginData.RefreshToken,
+                BuildRefreshCookieOptions(DateTimeOffset.UtcNow.AddDays(7)));
+        }
+
+        _logger.LogInformation("Login success userId {UserId}", loginData.User.Id);
+        return Ok(new ApiSuccessResponse<LoginResponse>(loginData));
     }
 
     /// <summary>Làm mới access_token bằng refresh_token.</summary>
@@ -46,10 +69,27 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest request, CancellationToken cancellationToken)
     {
-        var result = await _authService.RefreshAsync(request, cancellationToken);
+        var refreshToken = Request.Cookies[RefreshTokenCookieName] ?? request?.RefreshToken;
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return BadRequest(new ApiErrorResponse("MISSING_REFRESH_TOKEN", "Refresh token is required."));
+        }
+
+        var refreshRequest = new RefreshRequest { RefreshToken = refreshToken };
+        var result = await _authService.RefreshAsync(refreshRequest, cancellationToken);
         if (!result.IsSuccess)
             return Unauthorized(new ApiErrorResponse(result.Code, result.Message));
-        return Ok(new ApiSuccessResponse<RefreshResponse>(result.Data!));
+
+        var refreshData = result.Data!;
+        if (!string.IsNullOrEmpty(refreshData.RefreshToken))
+        {
+            Response.Cookies.Append(
+                RefreshTokenCookieName,
+                refreshData.RefreshToken,
+                BuildRefreshCookieOptions(DateTimeOffset.UtcNow.AddDays(7)));
+        }
+
+        return Ok(new ApiSuccessResponse<RefreshResponse>(refreshData));
     }
 
     /// <summary>Đăng xuất: thu hồi refresh_token.</summary>
@@ -58,8 +98,16 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(ApiSuccessResponse<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Logout([FromBody] RefreshRequest request, CancellationToken cancellationToken)
     {
+        var refreshToken = Request.Cookies[RefreshTokenCookieName] ?? request?.RefreshToken;
+        var logoutRequest = new RefreshRequest { RefreshToken = refreshToken };
+
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-        var result = await _authService.LogoutAsync(request, ip, cancellationToken);
+        var result = await _authService.LogoutAsync(logoutRequest, ip, cancellationToken);
+
+        Response.Cookies.Delete(
+            RefreshTokenCookieName,
+            new CookieOptions { Path = "/api/v1/auth", Secure = true, SameSite = SameSiteMode.Strict });
+
         return Ok(new ApiSuccessResponse<object>(result.Data!));
     }
 

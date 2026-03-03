@@ -29,6 +29,10 @@ logs/
 # Cursor agent hook state (local)
 .cursor/scratchpad.md
 
+# APM inbox/outbox (temp task handoff files, not for commit)
+.apm/inbox/current_task.md
+.apm/inbox/current_task.result.md
+
 # IDE / OS
 .idea/
 *.swp

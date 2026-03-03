@@ -8,6 +8,8 @@ import { RolePermissionsProvider } from './context/RolePermissionsContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 import { PageLoading } from './components/PageLoading'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { ErrorPage } from './components/ErrorPage'
 import { LoginPage } from './pages/LoginPage'
 import { OrganizationsPage } from './pages/OrganizationsPage'
 import { UsersPage } from './pages/UsersPage'
@@ -80,8 +82,10 @@ function AppRoutes() {
         <Route path="system-config" element={<SystemConfigPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="403" element={<ErrorPage type="403" />} />
+        <Route path="500" element={<ErrorPage type="500" />} />
+        <Route path="*" element={<ErrorPage type="404" />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   )
@@ -89,17 +93,19 @@ function AppRoutes() {
 
 function App() {
   return (
-    <ConfigProvider theme={bcdtAntdTheme} locale={viVN}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <RolePermissionsProvider>
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-          </RolePermissionsProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ConfigProvider>
+    <ErrorBoundary>
+      <ConfigProvider theme={bcdtAntdTheme} locale={viVN}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <RolePermissionsProvider>
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </RolePermissionsProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ConfigProvider>
+    </ErrorBoundary>
   )
 }
 

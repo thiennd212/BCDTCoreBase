@@ -7,6 +7,20 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// ── In-memory token store ─────────────────────────────────────────────
+let _accessToken: string | null = null
+
+export const tokenStore = {
+  get: () => _accessToken,
+  set: (t: string | null) => {
+    _accessToken = t
+  },
+  clear: () => {
+    _accessToken = null
+  },
+}
+// ──────────────────────────────────────────────────────────────────────
+
 // --- Kiểu response chuẩn BCDT (khớp backend ApiSuccessResponse / ApiErrorResponse) ---
 export interface ApiSuccessResponse<T> {
   success: true
@@ -68,33 +82,6 @@ export function isApiConflict(err: unknown): boolean {
   return getApiErrorCode(err) === 'CONFLICT'
 }
 
-const TOKEN_KEY = 'bcdt_access_token'
-const REFRESH_TOKEN_KEY = 'bcdt_refresh_token'
-
-export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
-}
-
-export function setStoredToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token)
-}
-
-export function clearStoredToken(): void {
-  localStorage.removeItem(TOKEN_KEY)
-}
-
-export function getStoredRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
-}
-
-export function setStoredRefreshToken(token: string): void {
-  localStorage.setItem(REFRESH_TOKEN_KEY, token)
-}
-
-export function clearStoredRefreshToken(): void {
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
-}
-
 const CURRENT_ROLE_KEY = 'bcdt_current_role'
 
 export function getStoredCurrentRole(): { id: number; code: string; name: string } | null {
@@ -118,7 +105,7 @@ export function clearStoredCurrentRole(): void {
 }
 
 apiClient.interceptors.request.use((config) => {
-  const token = getStoredToken()
+  const token = tokenStore.get()
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
@@ -150,15 +137,13 @@ apiClient.interceptors.response.use(
       return Promise.reject(e)
     }
 
-    const refreshToken = getStoredRefreshToken()
     const isLoginOrRefresh =
       originalRequest.url?.includes('/auth/login') ||
       originalRequest.url?.includes('/auth/refresh') ||
       originalRequest.url?.includes('/auth/logout')
 
-    if (isLoginOrRefresh || !refreshToken) {
-      clearStoredToken()
-      clearStoredRefreshToken()
+    if (isLoginOrRefresh) {
+      tokenStore.clear()
       if (!window.location.pathname.endsWith(LOGIN_PATH)) window.location.href = LOGIN_PATH
       const msg = getApiErrorMessage(err)
       const e = new Error(msg) as Error & { code?: string; status?: number }
@@ -168,8 +153,7 @@ apiClient.interceptors.response.use(
     }
 
     if (originalRequest._retry) {
-      clearStoredToken()
-      clearStoredRefreshToken()
+      tokenStore.clear()
       if (!window.location.pathname.endsWith(LOGIN_PATH)) window.location.href = LOGIN_PATH
       const msg = getApiErrorMessage(err)
       const e = new Error(msg) as Error & { code?: string; status?: number }
@@ -193,14 +177,12 @@ apiClient.interceptors.response.use(
     try {
       const { authApi } = await import('./authApi')
       const data = await authApi.refresh()
-      setStoredToken(data.accessToken)
-      if (data.refreshToken) setStoredRefreshToken(data.refreshToken)
+      tokenStore.set(data.accessToken)
       onRefreshed(data.accessToken)
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
       return apiClient(originalRequest)
     } catch {
-      clearStoredToken()
-      clearStoredRefreshToken()
+      tokenStore.clear()
       if (!window.location.pathname.endsWith(LOGIN_PATH)) window.location.href = LOGIN_PATH
       const msg = getApiErrorMessage(err)
       const e = new Error(msg) as Error & { code?: string; status?: number }

@@ -16,8 +16,9 @@ import {
   message,
   Tag,
 } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined, UploadOutlined, DownloadOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined, UploadOutlined, DownloadOutlined, CopyOutlined } from '@ant-design/icons'
 import { getApiErrorMessage } from '../api/apiClient'
+import { QueryErrorDisplay } from '../components/ErrorPage'
 import { formsApi } from '../api/formsApi'
 import { reportingFrequenciesApi } from '../api/reportingFrequenciesApi'
 import type {
@@ -51,18 +52,24 @@ export function FormsPage() {
   const queryClient = useQueryClient()
   const [form] = Form.useForm<CreateFormDefinitionRequest & { status?: string }>()
   const [templateForm] = Form.useForm<{ name: string; code?: string }>()
+  const [cloneForm] = Form.useForm<{ newCode: string; newName: string }>()
   const [modalOpen, setModalOpen] = useState(false)
   const [templateModalOpen, setTemplateModalOpen] = useState(false)
+  const [cloneModalOpen, setCloneModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [selectedFormId, setSelectedFormId] = useState<number | null>(null)
+  const [cloningRecord, setCloningRecord] = useState<FormDefinitionDto | null>(null)
   const formContainerRef = useRef<HTMLDivElement>(null)
   const templateFormRef = useRef<HTMLDivElement>(null)
+  const cloneFormRef = useRef<HTMLDivElement>(null)
   const templateFileInputRef = useRef<HTMLInputElement>(null)
   const [templateFile, setTemplateFile] = useState<File | null>(null)
   useFocusFirstInModal(modalOpen, formContainerRef)
   useScrollPageTopWhenModalOpen(modalOpen)
   useFocusFirstInModal(templateModalOpen, templateFormRef)
   useScrollPageTopWhenModalOpen(templateModalOpen)
+  useFocusFirstInModal(cloneModalOpen, cloneFormRef)
+  useScrollPageTopWhenModalOpen(cloneModalOpen)
 
   const { data: forms = [], isLoading, error } = useQuery({
     queryKey: ['forms'],
@@ -114,6 +121,20 @@ export function FormsPage() {
     onError: (err) => message.error(getApiErrorMessage(err) || 'Xóa thất bại'),
   })
 
+  const cloneMutation = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: { newCode: string; newName: string } }) =>
+      formsApi.clone(id, body),
+    onSuccess: (data) => {
+      message.success('Nhân bản biểu mẫu thành công')
+      queryClient.invalidateQueries({ queryKey: ['forms'] })
+      setCloneModalOpen(false)
+      setCloningRecord(null)
+      cloneForm.resetFields()
+      navigate(`/forms/${data.id}/config`)
+    },
+    onError: (err) => message.error(getApiErrorMessage(err) || 'Nhân bản thất bại'),
+  })
+
   const createFromTemplateMutation = useMutation({
     mutationFn: ({ file, name, code }: { file: File; name: string; code?: string }) =>
       formsApi.createFromTemplate(file, name, code),
@@ -154,6 +175,12 @@ export function FormsPage() {
       status: record.status ?? 'Draft',
     })
     setModalOpen(true)
+  }
+
+  const openClone = (record: FormDefinitionDto) => {
+    setCloningRecord(record)
+    cloneForm.setFieldsValue({ newCode: `${record.code}_COPY`, newName: `${record.name} (bản sao)` })
+    setCloneModalOpen(true)
   }
 
   const handleSubmit = async () => {
@@ -243,6 +270,7 @@ export function FormsPage() {
                 ]
               : []),
             { key: 'edit', label: 'Sửa', icon: <EditOutlined />, onClick: () => openEdit(record) },
+            { key: 'clone', label: 'Nhân bản', icon: <CopyOutlined />, onClick: () => openClone(record) },
             {
               key: 'delete',
               label: 'Xóa',
@@ -262,13 +290,7 @@ export function FormsPage() {
     },
   ]
 
-  if (error) {
-    return (
-      <Card>
-        <Text type="danger">Lỗi: {(error as Error).message}</Text>
-      </Card>
-    )
-  }
+  if (error) return <QueryErrorDisplay error={error} />
 
   return (
     <>
@@ -448,6 +470,34 @@ export function FormsPage() {
             </Form.Item>
             <Form.Item name="code" label="Mã biểu mẫu (tùy chọn)">
               <Input placeholder="Để trống sẽ tự sinh từ tên" />
+            </Form.Item>
+          </Form>
+        </div>
+      </Modal>
+      <Modal
+        title={`Nhân bản biểu mẫu: ${cloningRecord?.name ?? ''}`}
+        open={cloneModalOpen}
+        onOk={() => {
+          cloneForm.validateFields().then((values) => {
+            if (!cloningRecord) return
+            cloneMutation.mutate({ id: cloningRecord.id, body: values })
+          })
+        }}
+        onCancel={() => { setCloneModalOpen(false); setCloningRecord(null); cloneForm.resetFields() }}
+        okText="Nhân bản"
+        cancelText="Hủy"
+        width={MODAL_FORM.MEDIUM}
+        style={{ top: MODAL_FORM_TOP_OFFSET }}
+        destroyOnHidden
+        confirmLoading={cloneMutation.isPending}
+      >
+        <div ref={cloneFormRef}>
+          <Form form={cloneForm} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item name="newCode" label="Mã biểu mẫu mới" rules={[{ required: true, message: 'Nhập mã biểu mẫu mới' }]}>
+              <Input placeholder="VD: BM01_COPY" />
+            </Form.Item>
+            <Form.Item name="newName" label="Tên biểu mẫu mới" rules={[{ required: true, message: 'Nhập tên biểu mẫu mới' }]}>
+              <Input placeholder="VD: Báo cáo doanh thu (bản sao)" />
             </Form.Item>
           </Form>
         </div>

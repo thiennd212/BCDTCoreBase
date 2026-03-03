@@ -115,4 +115,19 @@ public class ReportingPeriodsController : ControllerBase
         }
         return Ok(new ApiSuccessResponse<object>(result.Data!));
     }
+
+    /// <summary>Xuất tóm tắt tổng hợp tất cả đơn vị trong một kỳ báo cáo (FR-TH-03). Trả JSON gồm các dòng ReportSummary.</summary>
+    [HttpGet("{id:int}/export-summary")]
+    [ProducesResponseType(typeof(ApiSuccessResponse<PeriodSummaryExportDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportSummary(int id, CancellationToken cancellationToken = default)
+    {
+        var result = await _service.GetSummaryExportAsync(id, cancellationToken);
+        if (!result.IsSuccess)
+        {
+            if (result.Code == "NOT_FOUND") return NotFound(new ApiErrorResponse(result.Code, result.Message));
+            return BadRequest(new ApiErrorResponse(result.Code, result.Message));
+        }
+        return Ok(new ApiSuccessResponse<PeriodSummaryExportDto>(result.Data!));
+    }
 }

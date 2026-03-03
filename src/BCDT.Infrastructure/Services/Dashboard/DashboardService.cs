@@ -13,9 +13,11 @@ public class DashboardService : IDashboardService
 
     public DashboardService(AppDbContext db) => _db = db;
 
-    public async Task<Result<DashboardAdminStatsDto>> GetAdminStatsAsync(int? userId, CancellationToken cancellationToken = default)
+    public async Task<Result<DashboardAdminStatsDto>> GetAdminStatsAsync(int? userId, int? periodId = null, CancellationToken cancellationToken = default)
     {
         var submissions = _db.ReportSubmissions.AsNoTracking().Where(x => !x.IsDeleted);
+        if (periodId.HasValue)
+            submissions = submissions.Where(x => x.ReportingPeriodId == periodId.Value);
         var total = await submissions.CountAsync(cancellationToken);
         var draft = await submissions.CountAsync(x => x.Status == "Draft", cancellationToken);
         var submitted = await submissions.CountAsync(x => x.Status == "Submitted", cancellationToken);
