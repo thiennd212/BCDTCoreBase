@@ -83,17 +83,60 @@ Khi `sp_ClearUserContext` fail (do SQL overload, timeout, connection issue) → 
 
 ## S8.4 – P5 Stress 500 VU ⚠️ MUST-ASK
 
-**Điều kiện MUST-ASK:**
-- [ ] Staging environment riêng (KHÔNG chạy trên production)
-- [ ] `PermitLimit ≥ 50000` trong appsettings
-- [ ] `Max Pool Size ≥ 1000` trong connection string
-- [ ] Monitor SQL Server CPU/memory khi chạy
-- [ ] RAM staging ≥ 8GB free
-- [ ] S8.1 và S8.2 phải xong trước
+### 1. Đánh giá rủi ro (Risk Assessment)
 
-**Lệnh (khi điều kiện đủ):**
+| Loại rủi ro | Mức độ | Mô tả |
+|-------------|--------|-------|
+| Production data | High | Nếu chạy nhầm lên production: 500 VU tạo load thật → ảnh hưởng user thật |
+| SQL Server stability | High | 500 × concurrent queries → connection exhaustion nếu MaxPoolSize < 1000 → cascading failures |
+| Rate Limiter | Medium | Nếu PermitLimit < 50000 → 429 storm → test vô nghĩa |
+| Dev machine crash | Medium | Laptop dev không đủ tài nguyên cho 500 CCU → kết quả sai lệch, BE có thể crash |
+| BCrypt CPU storm | Medium | 500 VU login đồng thời → CPU saturation → p99 > 60s khi ramp |
+
+- **Production impact:** Nếu chạy nhầm môi trường → DDoS chính hệ thống. Risk cao nhất.
+- **Rollback effort:** Chỉ cần stop k6; không thay đổi code → rollback ngay lập tức.
+
+### 2. Phương án (Options)
+
+**Phương án A – Chạy trên dev machine (localhost) sau khi fix BCrypt/pool:**
+- Mô tả: Cấu hình appsettings.Development.json với PermitLimit=50000, MaxPoolSize=1000; chạy `k6 run --vus 500 --duration 20m`
+- Ưu điểm: Không cần staging server; có thể chạy ngay
+- Nhược điểm: Dev laptop CPU/RAM không đủ cho 500 CCU → kết quả không đại diện production; p99 spike do hardware limit, không phải code
+
+**Phương án B – Chờ staging server (khuyến nghị):**
+- Mô tả: Chuẩn bị dedicated server (≥8 core, ≥16GB RAM, SQL Server separate) → deploy BCDT → chạy P5 từ máy ngoài
+- Ưu điểm: Kết quả có giá trị thực; tách biệt dev machine limit; gần production hơn
+- Nhược điểm: Cần effort setup staging (~2-4h); cần server phần cứng
+
+**Phương án C – Chạy P5 ramp nhỏ (200→300→500 VU, 5 phút/bước):**
+- Mô tả: Thay vì 500 VU ngay, ramp dần: 200 VU 5m → 300 VU 5m → 500 VU 10m để phát hiện breaking point
+- Ưu điểm: Ít rủi ro crash máy; dữ liệu breaking point rõ hơn; có thể dừng sớm nếu hệ thống fail ở 300
+- Nhược điểm: Vẫn trên dev machine nếu không có staging
+
+### 3. Đề xuất (Recommendation)
+
+→ **Chọn Phương án C** (ramp nhỏ trên dev machine) nếu muốn chạy ngay để có dữ liệu sơ bộ.
+→ **Chọn Phương án B** nếu muốn kết quả có giá trị cho production planning (khuyến nghị trước go-live).
+
+Lý do: Dev machine đã cho thấy giới hạn ở P7 Soak (20s avg cho 100 CCU); 500 CCU trên dev sẽ cho kết quả sai lệch hoàn toàn. Nếu mục tiêu là kiểm chứng production capacity, cần staging.
+
+### 4. Pre-conditions (phải đáp ứng trước khi proceed)
+
+- [ ] Xác nhận môi trường: DEV localhost (chấp nhận kết quả không chính xác) hay STAGING (kết quả production-like)?
+- [ ] `PermitLimit ≥ 50000` trong `appsettings.Development.json` (hoặc staging env)
+- [ ] `Max Pool Size ≥ 1000` trong connection string
+- [ ] S8.1 (SessionContext fix) ✅ đã xong
+- [ ] Monitor SQL Server CPU/memory trong khi chạy (SQL Server Profiler hoặc Activity Monitor)
+- [ ] **KHÔNG chạy trên production** – xác nhận endpoint là localhost hoặc staging URL
+
+**Lệnh (Phương án C – ramp):**
 ```bash
-/c/Program Files/k6/k6.exe run --vus 500 --duration 20m docs/load-test/scenarios.js
+# Bước 1: 200 VU 5m (đã biết pass từ P4)
+/c/Program Files/k6/k6.exe run --vus 200 --duration 5m docs/load-test/scenarios.js
+# Bước 2: 300 VU 5m (territory mới)
+/c/Program Files/k6/k6.exe run --vus 300 --duration 5m docs/load-test/scenarios.js
+# Bước 3: 500 VU 10m (P5 target)
+/c/Program Files/k6/k6.exe run --vus 500 --duration 10m docs/load-test/scenarios.js
 ```
 
 ---

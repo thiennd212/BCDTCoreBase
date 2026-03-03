@@ -53,6 +53,45 @@ Nếu task chạm một trong các vùng sau, AI Implementer (Cursor) **phải d
 - **Workbook flow**: BuildWorkbookFromSubmissionService, SyncFromPresentationService, DataBindingResolver, endpoints `workbook-data`, `report-presentations`.
 - **Dashboard/Reporting**: bất kỳ thay đổi dùng ReadReplica / AppReadOnlyDbContext.
 - **SQL scripts** trong `docs/script_core/sql/` ảnh hưởng production migration.
+- **Load test P5+** (500+ VU): cần staging env riêng, không chạy trên production.
+
+### 2.1.1 MUST-ASK Presentation Format (bắt buộc khi trình bày để xin xác nhận)
+
+Khi AI cần user confirm một MUST-ASK, trình bày **đầy đủ 4 mục** sau (không được bỏ):
+
+```
+## ⚠️ MUST-ASK – [Tên task]
+
+### 1. Đánh giá rủi ro (Risk Assessment)
+| Loại rủi ro | Mức độ | Mô tả |
+|-------------|--------|-------|
+| [loại] | Critical / High / Medium / Low | [impact cụ thể] |
+- **Production impact:** [ảnh hưởng lên user/data/uptime khi sai]
+- **Rollback effort:** [dễ/khó roll back, cần downtime không?]
+
+### 2. Phương án (Options)
+**Phương án A – [Tên]:**
+- Mô tả: ...
+- Ưu điểm: ...
+- Nhược điểm / Rủi ro: ...
+
+**Phương án B – [Tên]:**
+- Mô tả: ...
+- Ưu điểm: ...
+- Nhược điểm / Rủi ro: ...
+
+### 3. Đề xuất (Recommendation)
+→ **Chọn Phương án [X]** vì [lý do cụ thể: risk thấp hơn / cost thấp hơn / phù hợp scope].
+
+### 4. Pre-conditions (điều kiện phải đáp ứng trước khi proceed)
+- [ ] [Điều kiện 1]
+- [ ] [Điều kiện 2]
+```
+
+**Quy tắc:**
+- Nếu thiếu bất kỳ mục nào → không được proceed, phải bổ sung trước.
+- User confirm "OK" → AI mới được implement.
+- Sau khi implement: ghi DECISIONS.md (§2.2) và verify (§4).
 
 ### 2.2 DECISION REQUIRED (bắt buộc ghi DECISIONS.md)
 Bắt buộc thêm entry vào `/memory/DECISIONS.md` nếu thay đổi thuộc loại:
