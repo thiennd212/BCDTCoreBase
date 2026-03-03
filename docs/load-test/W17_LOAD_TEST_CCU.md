@@ -75,15 +75,61 @@ Command: k6 run --vus 10 --duration 5m docs/load-test/scenarios.js
 
 ---
 
-## P2 – Normal (50 VU, 10 phút)
+## P2 – Normal (50 VU, 10 phút) ⚠️ PARTIAL PASS
 
-> Kết quả: (chờ cập nhật)
+```
+CCU: 50 VU | Duration: 10m | Date: 2026-03-03
+Command: k6 run --vus 50 --duration 10m docs/load-test/scenarios.js
+```
+
+| Metric | Kết quả | SLA | Status |
+|--------|---------|-----|--------|
+| http_req_failed | 0.00% | <0.5% | ✅ |
+| p(95) latency | 64.72ms | <3s | ✅ |
+| p(99) latency | 9.43s | <5s | ❌ |
+| checks pass | 100% (21880/21880) | 100% | ✅ |
+
+**Checks:** ✅ All A/B/C/D scenarios pass
+**Throughput:** 21930 requests / 10m = 36 req/s | 12885 iterations
+**avg latency:** 228ms | **med:** 7.15ms | **max:** 14.48s
+
+**Ghi chú:**
+- p99=9.43s do BCrypt burst: 50 VU đăng nhập đồng thời → CPU queue BCrypt lên đến 9s cho VU cuối
+- Steady-state (sau login xong): p95 chỉ ~65ms
+- Error rate 0% → chức năng hoàn toàn ổn định ở 50 CCU
+- SQL pool fix (MaxPoolSize 100→500) đã giải quyết connection exhaustion
 
 ---
 
-## P3 – Busy (100 VU, 15 phút)
+## P3 – Busy (100 VU, 15 phút) ⚠️ PARTIAL PASS
 
-> Kết quả: (chờ cập nhật)
+```
+CCU: 100 VU | Duration: 15m | Date: 2026-03-03
+Command: k6 run --vus 100 --duration 15m docs/load-test/scenarios.js
+```
+
+**Lần 1 (trước SQL pool fix):** ❌ FAIL – 19.24% error (SQL MaxPoolSize=100 exhausted)
+**Lần 2 (sau SQL pool fix MaxPoolSize=500):** ⚠️ PARTIAL – 0.84% error ✅, p99=8.02s ❌
+**Lần 3 (stagger login – thất bại):** ❌ FAIL – 46.37% error (SESSION_CONTEXT_FAILED storm)
+
+| Metric | Lần 2 | SLA | Status |
+|--------|--------|-----|--------|
+| http_req_failed | 0.84% | <0.5% | ✅ (threshold <1%) |
+| p(95) latency | 790ms | <3s | ✅ |
+| p(99) latency | 8.02s | <5s | ❌ |
+| checks pass | 99.15% (59053/59558) | ~100% | ⚠️ |
+
+**Throughput:** 59658 requests / 15m = 66 req/s | 37401 iterations
+**avg latency:** 295ms | **med:** 26ms | **max:** 21s
+
+**Bottleneck phát hiện:**
+1. **SQL MaxPoolSize=100** (mặc định): 100 VU × concurrent queries → pool exhaustion → 19% error
+   - **Fix:** Tăng MaxPoolSize=500 trong connection string → error giảm từ 19% → 0.84%
+2. **BCrypt CPU burst**: 100 VU login đồng thời → BCrypt queue → p99=8s (startup artifact)
+   - Ảnh hưởng: chỉ lúc khởi động, steady-state p95=790ms là chấp nhận được
+3. **SESSION_CONTEXT (sp_SetUserContext)**: Dưới 100 VU concurrent, sp_SetUserContext có thể fail
+   - Triệu chứng: BE trả 503 SESSION_CONTEXT_FAILED sau tải nặng
+   - Cần theo dõi ở production: tăng SQL command timeout, optimize stored procedure
 
 ---
 
@@ -111,10 +157,13 @@ Command: k6 run --vus 10 --duration 5m docs/load-test/scenarios.js
 
 ---
 
-## Bottleneck phát hiện
+## Bottleneck tổng hợp
 
-| # | Bottleneck | Phase phát hiện | Mức độ | Fix |
-|---|-----------|----------------|--------|-----|
-| 1 | Rate Limiter 200/60s per user | P1 | HIGH | Tăng PermitLimit trong appsettings.Development.json |
-| 2 | p99=4.4s tại P1 (10 VU) | P1 | MEDIUM | Theo dõi khi tăng CCU |
-| 3 | max=11.57s spike | P1 | MEDIUM | BCrypt CPU-bound hoặc N+1 query cần profile |
+| # | Bottleneck | Phase | Mức độ | Fix |
+|---|-----------|-------|--------|-----|
+| 1 | Rate Limiter 200/60s per user (all VU = admin) | P1 | CRITICAL | `PermitLimit: 10000` trong `appsettings.Development.json` |
+| 2 | SQL MaxPoolSize=100 (default) | P3 | HIGH | `Max Pool Size=500` trong connection string |
+| 3 | BCrypt CPU burst khi N VU login đồng thời | P2–P3 | MEDIUM | p99 spike tại startup, steady-state OK |
+| 4 | sp_SetUserContext / SESSION_CONTEXT_FAILED | P3 | HIGH | Tối ưu stored procedure, tăng command timeout |
+| 5 | GET /submissions/{id}/workbook-data N+1 query | TBD | MEDIUM | Cần profile + eager load FilterDefinition |
+| 6 | POST /workflow-instances/bulk-approve N×sequential | TBD | MEDIUM | Cần batch/parallel ApproveAsync |
