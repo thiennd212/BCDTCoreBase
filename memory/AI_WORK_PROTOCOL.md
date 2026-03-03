@@ -13,6 +13,48 @@ Giao thức bắt buộc cho AI khi làm việc trên repo. Nếu không phát h
 
 ---
 
+## 0.1. Task Proposal Format – BẮT BUỘC cho task Trung bình (M) trở lên
+
+Khi AI **đề xuất hoặc trình bày** bất kỳ task có effort **Medium (M) hoặc Large (L)** để user xác nhận trước khi implement, **BẮT BUỘC** trình bày đủ 4 mục:
+
+```
+### 1. Đánh giá rủi ro (Risk Assessment)
+| Loại rủi ro | Mức độ | Mô tả |
+|-------------|--------|-------|
+| [loại] | Critical / High / Medium / Low | [impact cụ thể] |
+- Production impact: [ảnh hưởng lên user/data/uptime nếu sai]
+- Rollback effort: [dễ/khó, cần downtime không?]
+
+### 2. Phương án (Options – ≥2)
+**Phương án A – [Tên]:** [mô tả ngắn]
+- Ưu: ...  |  Nhược: ...
+
+**Phương án B – [Tên]:** [mô tả ngắn]
+- Ưu: ...  |  Nhược: ...
+
+### 3. Đề xuất (Recommendation)
+→ Chọn Phương án [X] vì [lý do cụ thể].
+
+### 4. Pre-conditions
+- [ ] [Điều kiện 1]
+- [ ] [Điều kiện 2]
+```
+
+**Phạm vi áp dụng:**
+| Effort | Áp dụng format? |
+|--------|----------------|
+| Tiny (T) / Small (S) | ❌ Không cần – proceed trực tiếp |
+| Medium (M) | ✅ Bắt buộc – trình bày trước khi implement |
+| Large (L) | ✅ Bắt buộc – trình bày trước khi implement |
+| MUST-ASK (bất kể size) | ✅ Bắt buộc – xem §2.1.1 |
+
+**Quy tắc:**
+- User confirm "OK" → AI mới được implement.
+- Nếu thiếu bất kỳ mục nào → không được proceed, bổ sung trước.
+- Sau implement: verify (§4) + DECISIONS.md nếu cần (§2.2).
+
+---
+
 ## 1. Scope of allowed edits (khóa phạm vi)
 
 ### 1.1 Allowed (chỉ trong phạm vi task)
@@ -55,7 +97,7 @@ Nếu task chạm một trong các vùng sau, AI Implementer (Cursor) **phải d
 - **SQL scripts** trong `docs/script_core/sql/` ảnh hưởng production migration.
 - **Load test P5+** (500+ VU): cần staging env riêng, không chạy trên production.
 
-### 2.1.1 MUST-ASK Presentation Format (bắt buộc khi trình bày để xin xác nhận)
+### 2.1.1 MUST-ASK Presentation Format (dùng cùng format §0.1, bắt buộc bất kể effort size)
 
 Khi AI cần user confirm một MUST-ASK, trình bày **đầy đủ 4 mục** sau (không được bỏ):
 
